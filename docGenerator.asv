@@ -1,0 +1,19 @@
+options.format = 'html';
+options.showCode = true;
+options.evalCode = false;
+options.catchError = false;
+options.outputDir = 'C:\Users\jmp8430\Documents\Research\GraphModel_ToolboxV2\html';
+
+all_mfiles = dir(fullfile(projectRoot, '**', '*.m*'));
+notinclude_mfiles 
+
+for i = 1:length(fileList)
+    
+    if strcmp(fileList(i).name,mfilename) == 0 
+        publish(fileList(i).name, options);
+    end
+
+end
+
+
+

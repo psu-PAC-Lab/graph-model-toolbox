@@ -1,0 +1,322 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>gmt_Graph</title>
+<meta name="generator" content="MATLAB 25.1">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2025-10-28">
+<meta name="DC.source" content="gmt_Graph.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">gmt_Graph</a>
+</li>
+<li>
+<a href="#2">Constructor Graph</a>
+</li>
+<li>
+<a href="#3">Graph Update</a>
+</li>
+<li>
+<a href="#4">Property Update</a>
+</li>
+</ul>
+</div>
+<h2 id="1">gmt_Graph</h2>
+<p>Superclass used to create any type of graph model (Component or System)</p>
+<pre class="codeinput">
+<span class="keyword">classdef</span> gmt_Graph
+    <span class="keyword">properties</span>
+        Name <span class="typesection">string </span><span class="comment">% Name of the graph model</span>
+        EdgeMatrix <span class="typesection">double </span><span class="comment">% An edge matrix defining connections between edges and vertices</span>
+        Edges <span class="comment">% A vector of edge objects</span>
+        Vertices <span class="comment">% A vector of vertex objects</span>
+        GraphProperties <span class="comment">% Object containing overall graph properties</span>
+        G <span class="comment">% A directed graph Object</span>
+        statevarNames <span class="typesection">string </span><span class="comment">% Cell array of state variable names</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span>
+</pre>
+<h2 id="2">Constructor Graph</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices)
+            <span class="comment">% Generates instance of gmt_Graph object</span>
+            <span class="comment">% Assign Data</span>
+            obj.Name = Name;
+            obj.EdgeMatrix = EdgeMatrix;
+            obj.Edges = Edges;
+            obj.Vertices = Vertices;
+
+            <span class="comment">% Compute Properties</span>
+            obj.GraphProperties = gmt_GraphProperties(obj);
+
+            <span class="comment">% Update Properties</span>
+            obj = gmt_PropertyUpdate(obj);
+
+            <span class="comment">% Graph Update</span>
+            obj = gmt_GraphUpdate(obj);
+
+        <span class="keyword">end</span>
+</pre>
+<h2 id="3">Graph Update</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_GraphUpdate(obj)
+            <span class="comment">% Updates direct graph object properties</span>
+            obj.G = digraph(obj.EdgeMatrix(:,1), obj.EdgeMatrix(:,2));
+
+            <span class="comment">% Vertex Color Coding</span>
+            <span class="keyword">for</span> i = 1:obj.GraphProperties.Nv
+                Vertices_Names_tmp(i,1) = obj.Vertices(i).Name;
+                <span class="keyword">if</span> obj.Vertices(i).VertexType == gmt_VertexType.External
+                    color_tmp(i,:) = [1 0 0];
+                <span class="keyword">else</span>
+                    color_tmp(i,:) = [0 0 1];
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+
+            obj.G.Nodes.Name = Vertices_Names_tmp;
+
+            <span class="comment">% Edge Color Coding</span>
+            <span class="keyword">for</span> i =1:obj.GraphProperties.Ne
+                Edges_Names_tmp(i,1) = obj.Edges(i).Name;
+                <span class="keyword">if</span> obj.Edges(i).EdgeType  == gmt_EdgeType.External
+                    color_tmp2(i,:) = [1 0 0];
+                <span class="keyword">else</span>
+                    color_tmp2(i,:) = [0 0 1];
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+
+            obj.G.Edges.Name = Edges_Names_tmp;
+
+            obj.G.Nodes.Color = color_tmp;
+            obj.G.Edges.Color = color_tmp2;
+
+            plot(obj.G,<span class="string">'EdgeLabel'</span>,obj.G.Edges.Name,<span class="string">'EdgeColor'</span>,obj.G.Edges.Color,<span class="string">'NodeLabel'</span>,obj.G.Nodes.Name,<span class="string">'NodeColor'</span>,obj.G.Nodes.Color,<span class="string">'LineWidth'</span>,2)
+
+        <span class="keyword">end</span>
+</pre>
+<h2 id="4">Property Update</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_PropertyUpdate(obj)
+            <span class="comment">% Updates graph properties object and performs validation checks</span>
+            <span class="keyword">if</span> obj.GraphProperties.GraphValidity.GraphValid &amp;&amp; obj.GraphProperties.GraphValidity.VerticesValid &amp;&amp; obj.GraphProperties.GraphValidity.EdgesValid
+                <span class="comment">% Compute Boundary Vertices</span>
+                obj.GraphProperties.Ns = 0;
+                <span class="keyword">for</span> j = 1:obj.GraphProperties.Nv
+                    tmp = obj.GraphProperties.M(j,obj.GraphProperties.M(j,:)~=0); <span class="comment">% Grab non-zero elements on each vertices</span>
+                    tmp_lgth = length(tmp); <span class="comment">% Determine total number of edges</span>
+                    tmp_sum = max(sum(abs(tmp(tmp==-1))),sum(tmp(tmp==1))); <span class="comment">% Take the max of all positive or all negative</span>
+                    V_bv(j) = logical(tmp_sum == tmp_lgth); <span class="comment">% If all the elements match one direction, it is a boundary vertex</span>
+                    obj.Vertices(j) = obj.Vertices(j).gmt_VertexTypeUpdate(V_bv(j)); <span class="comment">% Update Exogeny of Each Vertex</span>
+                    <span class="keyword">if</span> obj.Vertices(j).VertexType == gmt_VertexType.Internal
+                        obj.GraphProperties.Ns = obj.GraphProperties.Ns + 1;
+                        obj.Vertices(j) = obj.Vertices(j).gmt_VertexStateVariableUpdate(obj.GraphProperties.Ns);
+                    <span class="keyword">end</span>
+                <span class="keyword">end</span>
+
+                <span class="comment">%Total number of boundary vertices</span>
+                obj.GraphProperties.NvB = sum(V_bv);
+
+            <span class="keyword">elseif</span> not(obj.GraphProperties.GraphValidity.GraphValid)
+                error(<span class="string">'Error: Edge Matrix is not properly defined. Number of vertices must be greater than or equal to the number of edges'</span>)
+            <span class="keyword">elseif</span> not(obj.GraphProperties.GraphValidity.VerticesValid)
+                error(<span class="string">'Error: Number of Vertices specified does not match dimensions of Edge Matrix'</span>)
+            <span class="keyword">elseif</span> not(obj.GraphProperties.GraphValidity.EdgesValid)
+                error(<span class="string">'Error: Number of Edges specified does not match dimensions of Edge Matrix'</span>)
+            <span class="keyword">end</span>
+
+
+        <span class="keyword">end</span>
+</pre>
+<pre class="codeinput">    <span class="keyword">end</span>
+
+<span class="keyword">end</span>
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025a</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% gmt_Graph
+% Superclass used to create any type of graph model (Component or System)
+
+classdef gmt_Graph
+    properties
+        Name string % Name of the graph model
+        EdgeMatrix double % An edge matrix defining connections between edges and vertices
+        Edges % A vector of edge objects
+        Vertices % A vector of vertex objects
+        GraphProperties % Object containing overall graph properties
+        G % A directed graph Object
+        statevarNames string % Cell array of state variable names
+    end
+
+    methods 
+        %% Constructor Graph 
+        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices)
+            % Generates instance of gmt_Graph object
+            % Assign Data
+            obj.Name = Name;
+            obj.EdgeMatrix = EdgeMatrix;
+            obj.Edges = Edges;
+            obj.Vertices = Vertices;
+
+            % Compute Properties 
+            obj.GraphProperties = gmt_GraphProperties(obj);
+
+            % Update Properties 
+            obj = gmt_PropertyUpdate(obj);
+
+            % Graph Update
+            obj = gmt_GraphUpdate(obj);
+
+        end
+
+        %% Graph Update
+        function obj = gmt_GraphUpdate(obj)
+            % Updates direct graph object properties 
+            obj.G = digraph(obj.EdgeMatrix(:,1), obj.EdgeMatrix(:,2));
+                      
+            % Vertex Color Coding
+            for i = 1:obj.GraphProperties.Nv
+                Vertices_Names_tmp(i,1) = obj.Vertices(i).Name;
+                if obj.Vertices(i).VertexType == gmt_VertexType.External
+                    color_tmp(i,:) = [1 0 0];
+                else
+                    color_tmp(i,:) = [0 0 1];
+                end
+            end
+            
+            obj.G.Nodes.Name = Vertices_Names_tmp;
+
+            % Edge Color Coding 
+            for i =1:obj.GraphProperties.Ne
+                Edges_Names_tmp(i,1) = obj.Edges(i).Name;
+                if obj.Edges(i).EdgeType  == gmt_EdgeType.External 
+                    color_tmp2(i,:) = [1 0 0];
+                else
+                    color_tmp2(i,:) = [0 0 1];
+                end
+            end
+
+            obj.G.Edges.Name = Edges_Names_tmp;
+            
+            obj.G.Nodes.Color = color_tmp;
+            obj.G.Edges.Color = color_tmp2;
+
+            plot(obj.G,'EdgeLabel',obj.G.Edges.Name,'EdgeColor',obj.G.Edges.Color,'NodeLabel',obj.G.Nodes.Name,'NodeColor',obj.G.Nodes.Color,'LineWidth',2)
+
+        end
+
+        %% Property Update
+        function obj = gmt_PropertyUpdate(obj)
+            % Updates graph properties object and performs validation checks
+            if obj.GraphProperties.GraphValidity.GraphValid && obj.GraphProperties.GraphValidity.VerticesValid && obj.GraphProperties.GraphValidity.EdgesValid
+                % Compute Boundary Vertices
+                obj.GraphProperties.Ns = 0;
+                for j = 1:obj.GraphProperties.Nv
+                    tmp = obj.GraphProperties.M(j,obj.GraphProperties.M(j,:)~=0); % Grab non-zero elements on each vertices 
+                    tmp_lgth = length(tmp); % Determine total number of edges
+                    tmp_sum = max(sum(abs(tmp(tmp==-1))),sum(tmp(tmp==1))); % Take the max of all positive or all negative
+                    V_bv(j) = logical(tmp_sum == tmp_lgth); % If all the elements match one direction, it is a boundary vertex
+                    obj.Vertices(j) = obj.Vertices(j).gmt_VertexTypeUpdate(V_bv(j)); % Update Exogeny of Each Vertex 
+                    if obj.Vertices(j).VertexType == gmt_VertexType.Internal
+                        obj.GraphProperties.Ns = obj.GraphProperties.Ns + 1;
+                        obj.Vertices(j) = obj.Vertices(j).gmt_VertexStateVariableUpdate(obj.GraphProperties.Ns);
+                    end
+                end
+                
+                %Total number of boundary vertices
+                obj.GraphProperties.NvB = sum(V_bv); 
+
+            elseif not(obj.GraphProperties.GraphValidity.GraphValid)
+                error('Error: Edge Matrix is not properly defined. Number of vertices must be greater than or equal to the number of edges')
+            elseif not(obj.GraphProperties.GraphValidity.VerticesValid)
+                error('Error: Number of Vertices specified does not match dimensions of Edge Matrix')
+            elseif not(obj.GraphProperties.GraphValidity.EdgesValid)
+                error('Error: Number of Edges specified does not match dimensions of Edge Matrix')
+            end
+
+
+        end
+
+    end
+
+end
+
+##### SOURCE END #####
+-->
+</body>
+</html>

@@ -1,0 +1,113 @@
+%% gmt_Graph
+% Superclass used to create any type of graph model (Component or System)
+
+classdef gmt_Graph
+    properties (SetAccess = public)
+        Name string % Name of the graph model
+        EdgeMatrix double % An edge matrix defining connections between edges and vertices
+        Edges % A vector of edge objects
+        Vertices % A vector of vertex objects
+        GraphProperties % Object containing overall graph properties
+        G % A directed graph Object
+        statevarGenNames string % Cell array of generic state variable names
+        statevarUserNames string % Cell array of user defined state variable names for readability
+    end
+
+    methods 
+        %% Constructor Graph 
+        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices)
+            % Generates instance of gmt_Graph object
+            % Assign Data
+            obj.Name = Name;
+            obj.EdgeMatrix = EdgeMatrix;
+            obj.Edges = Edges;
+            obj.Vertices = Vertices;
+
+            % Compute Properties 
+            obj.GraphProperties = gmt_GraphProperties(obj);
+
+            % Update Properties 
+            obj = gmt_PropertyUpdate(obj);
+
+            % Graph Update
+            obj = gmt_GraphUpdate(obj);
+
+        end
+
+        %% Graph Update
+        % Function creates MATLAB native graph object and upates its properties for plotting  
+        function obj = gmt_GraphUpdate(obj)
+
+            % Updates direct graph object properties 
+            obj.G = digraph(obj.EdgeMatrix(:,1),obj.EdgeMatrix(:,2));
+                      
+            % Note need to update naming and graph object information 
+
+            % Vertex Color Coding
+            for i = 1:obj.GraphProperties.Nv
+                Vertices_Names_tmp(i,1) = obj.Vertices(i).Name;
+                if obj.Vertices(i).VertexType == gmt_VertexType.External
+                    color_tmp(i,:) = [1 0 0];
+                else
+                    color_tmp(i,:) = [0 0 1];
+                end
+            end
+            
+            obj.G.Nodes.Name = Vertices_Names_tmp;
+
+            % Edge Color Coding 
+            for i =1:obj.GraphProperties.Ne
+                Edges_Names_tmp(i,1) = obj.Edges(i).Name;
+                if obj.Edges(i).EdgeType  == gmt_EdgeType.External 
+                    color_tmp2(i,:) = [1 0 0];
+                else
+                    color_tmp2(i,:) = [0 0 1];
+                end
+            end
+
+            obj.G.Edges.Name = Edges_Names_tmp;
+            
+            obj.G.Nodes.Color = color_tmp;
+            obj.G.Edges.Color = color_tmp2;
+
+            plot(obj.G,'EdgeLabel',obj.G.Edges.Name,'EdgeColor',obj.G.Edges.Color,'NodeLabel',obj.G.Nodes.Name,'NodeColor',obj.G.Nodes.Color,'LineWidth',2)
+
+        end
+
+        %% Property Update
+        % Function performs validation checks, computes and updates graph properties
+        function obj = gmt_PropertyUpdate(obj)
+            % Updates graph properties object and performs validation checks
+            if obj.GraphProperties.GraphValidity.GraphValid && obj.GraphProperties.GraphValidity.VerticesValid && obj.GraphProperties.GraphValidity.EdgesValid
+                % Compute Boundary Vertices
+                obj.GraphProperties.Ns = 0;
+                for j = 1:obj.GraphProperties.Nv
+                    tmp = obj.GraphProperties.M(j,obj.GraphProperties.M(j,:)~=0); % Grab non-zero elements on each vertices 
+                    tmp_lgth = length(tmp); % Determine total number of edges
+                    tmp_sum = max(sum(abs(tmp(tmp==-1))),sum(tmp(tmp==1))); % Take the max of all positive or all negative
+                    V_bv(j) = logical(tmp_sum == tmp_lgth); % If all the elements match one direction, it is a boundary vertex
+                    obj.Vertices(j) = obj.Vertices(j).gmt_VertexTypeUpdate(V_bv(j)); % Update exogeny of each vertex 
+                    if obj.Vertices(j).VertexType == gmt_VertexType.Internal
+                        obj.GraphProperties.Ns = obj.GraphProperties.Ns + 1;
+                        obj.Vertices(j) = obj.Vertices(j).gmt_VertexStateVariableUpdate(obj.GraphProperties.Ns);
+                    end
+                end
+                
+                % Old Code to Calculate Boundary Vertices, Not Required
+                %Total number of boundary vertices
+                %obj.GraphProperties.NvB = sum(V_bv); 
+
+            elseif not(obj.GraphProperties.GraphValidity.GraphValid)
+                error('Error: Edge Matrix is not properly defined. Number of vertices must be greater than or equal to the number of edges')
+            elseif not(obj.GraphProperties.GraphValidity.VerticesValid)
+                error('Error: Number of Vertices specified does not match dimensions of Edge Matrix')
+            elseif not(obj.GraphProperties.GraphValidity.EdgesValid)
+                error('Error: Number of Edges specified does not match dimensions of Edge Matrix')
+            end
+        end
+        %% Compute System of Equations 
+        function obj = gmt_SystemEquations(obj)
+
+        end
+    end
+end

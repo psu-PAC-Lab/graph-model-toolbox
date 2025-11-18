@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding="utf-8"?>
+
+<toc version="2.0">
+<!-- First tocitem specifies top level in Help browser Contents pane -->
+<!-- This can be a roadmap page, as shown below, or a content page -->
+    <tocitem target="GraphModelToolboxHelp.html">Graph Model Toolbox
+        <!-- Nest tocitems to create hierarchical entries in  Contents-->
+        <!-- To include icons, use the following syntax for tocitems: -->
+        <!-- <tocitem target="foo.html" image="HelpIcon.NAME"> -->
+        <!-- Title-of-Section </tocitem> -->
+        <!-- where NAME is one of the following (use capital letters): -->
+        <!-- FUNCTION, USER_GUIDE, EXAMPLES, BLOCK, GETTING_STARTED, -->
+        <!-- DEMOS, RELEASE_NOTES --> 
+        <!-- Icon images used for these entries are also stored in -->
+        <!-- matlabroot/toolbox/matlab/icons -->
+        <!-- A Getting Started Guide usually comes first -->
+        <tocitem target="General Graph Toolbox Classes.html">General Graph Toolbox Classes
+            <tocitem target="Graph Class Definitions.html">Graph Class Definitions
+                <tocitem target="Graph Element Classes.html">Graph Element Classes
+                    <tocitem target="gmt_GraphVertex.html">gmt_GraphVertex </tocitem>
+                    <tocitem target="gmt_GraphEdge.html">gmt_GraphEdge </tocitem>
+                </tocitem>
+                <tocitem target="Graph Property Classes.html">Graph Property Classes
+                    <tocitem target="gmt_GraphProperties.html">gmt_GraphProperties </tocitem>
+                    <tocitem target="gmt_GraphValidity.html">gmt_GraphValidity </tocitem>
+                </tocitem>
+                <tocitem target="Graph Model Classes.html">Graph Model Classes
+                    <tocitem target="gmt_Graph.html">gmt_Graph </tocitem>
+                    <tocitem target="gmt_ComponentGraph.html">gmt_ComponentGraph </tocitem>
+                </tocitem>
+            </tocitem>
+            <tocitem target="Enumeration Definitions.html">Enumeration Definitions
+                <tocitem target="Analysis Enumerations.html">Analysis Enumerations
+                    <tocitem target="gmt_EnergyDomain.html">gmt_EnergyDomain </tocitem>
+                    <tocitem target="gmt_Fluid.html">gmt_Fluid </tocitem>
+                    <tocitem target="gmt_Units.html">gmt_Units </tocitem>
+                </tocitem>
+                <tocitem target="Element Enumerations.html">Element Enumerations
+                    <tocitem target="gmt_EdgeType.html">gmt_EdgeType </tocitem>
+                    <tocitem target="gmt_StateType.html">gmt_StateType </tocitem>
+                    <tocitem target="gmt_VertexType.html">gmt_VertexType </tocitem>
+                </tocitem>
+            </tocitem>
+        </tocitem>
+        <tocitem target="Component Model Classes.html">Component Model Classes
+            <tocitem target="gmt_RecipEngineModel.html">Reciprocating Engine Model </tocitem>
+        </tocitem>
+    </tocitem>
+</toc>

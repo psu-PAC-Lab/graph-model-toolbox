@@ -1,0 +1,90 @@
+%% gmt_ComponentGraph
+% Subclass used to create component graph models. Inherits properties and functions of Graph superclass 
+classdef gmt_ComponentGraph < gmt_Graph
+
+    properties
+        
+    end
+
+    methods  
+        %% Constructor Method
+        function obj = gmt_ComponentGraph(Name,EdgeMatrix,Edges,Vertices)
+            %% Class Graph Superclass 
+            obj@gmt_Graph(Name,EdgeMatrix,Edges,Vertices);
+            %% Update Component State Variables
+            obj = ComponentStateVariables(obj);
+            %% Update Power Equation
+            obj = UpdatePowerEq(obj);
+            %% Update State Derivative Equation 
+            obj = UpdateXDotEq(obj);
+            %% Update Component System of Equations 
+            obj = UpdateSysEqn(obj);
+        end
+        %% State Variable Names
+        function obj = ComponentStateVariables(obj)
+            % Updates edge equations with updated state variable names 
+            tmp = 1;
+            for i = 1:obj.GraphProperties.Nv
+                if obj.Vertices(i).StateType == gmt_StateType.Dynamic
+                    obj.statevarGen(tmp) = obj.Vertices(i).GenStateVariable;
+                    obj.statevarGen(tmp) = obj.Vertices(i).GenStateVariable;
+                    tmp = tmp + 1;
+                    for j = 1:obj.GraphProperties.Ne 
+                        if contains(obj.Edges(j).Eq,"xh") && obj.GraphProperties.M(i,j) == 1
+                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xh",obj.Vertices(i).GenStateVariable);
+                        elseif contains(obj.Edges(j).Eq,"xt") && obj.GraphProperties.M(i,j) == -1
+                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xt",obj.Vertices(i).GenStateVariable);
+                        end
+                    end
+                end
+            end
+        end
+        %% Update Power Equations for Each Dynamic Vertex
+        function obj = UpdatePowerEq(obj)
+            % Performs summation of power equations for each dynamic vertex
+            for i = 1:obj.GraphProperties.Nv
+                if obj.Vertices(i).StateType == gmt_StateType.Dynamic
+                    final_tmp = "";
+                    for j = 1:obj.GraphProperties.Ne
+                        prev_final_tmp = final_tmp;
+                        if abs(obj.GraphProperties.M(i,j)) > 0
+                            par_tmp = strcat("(",obj.Edges(j).Eq,")");
+                            if sign(obj.GraphProperties.M(i,j)) == -1
+                                final_tmp = strcat("-",par_tmp);
+                            else
+                                final_tmp = par_tmp;
+                            end
+                            if strlength(prev_final_tmp) > 0 && sign(obj.GraphProperties.M(i,j)) == 1
+                                final_tmp = strcat(prev_final_tmp,"+",final_tmp);
+                            elseif  strlength(prev_final_tmp) > 0 && sign(obj.GraphProperties.M(i,j)) == -1
+                                final_tmp = strcat(prev_final_tmp,final_tmp);
+                            end
+                            obj.Vertices(i) = gmt_PowerEqUpdate(obj.Vertices(i),final_tmp);
+                        end
+                    end
+                end
+            end
+        end
+        %% Update State Derivative Equation
+        function obj = UpdateXDotEq(obj)
+            % Update X_dot equations for each vertex 
+            for i = 1:obj.GraphProperties.Nv
+                obj.Vertices(i) = obj.Vertices(i).gmt_XDotEq;
+            end
+        end
+        %% Create System of Equations 
+        function obj = UpdateSysEqn(obj)
+            % 11/17/17 Need To Determine How To Compute Symbolic Express With Minimum Variables 
+            % Add each X_dot equation for each vertex 
+            idx_tmp = 1;
+            for i = 1:obj.GraphProperties.Nv
+                if obj.Vertices(i).VertexType == gmt_VertexType.Internal
+                    SysEqn_tmp(idx_tmp,1) = {convertStringsToChars(obj.Vertices(i).X_Dot_Eq)};
+                    idx_tmp = idx_tmp + 1;
+                end
+            end
+            SysEqnSym_tmp = str2sym(SysEqn_tmp);
+            obj.SysEqn = symfun(SysEqnSym_tmp,sym(obj.statevarGen));
+        end
+    end
+end
