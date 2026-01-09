@@ -2,7 +2,7 @@
 % Defines a DC electric motor model 
 
 %% Class Defintion and Superclass Reference
-classdef gmt_Motor < gmt_ComponentGraph
+classdef gmt_Motor < gmt_Graph
 
     %% Properties 
     properties
@@ -16,22 +16,30 @@ classdef gmt_Motor < gmt_ComponentGraph
             Vertices(1) = gmt_GraphVertex("Current","C*x*x_dot");
             Vertices(2) = gmt_GraphVertex("Angular Velocity","J*x*x_dot");
             Vertices(3) = gmt_GraphVertex("Motor Temperature","Cp*x_dot");
-            Vertices(4) = gmt_GraphVertex("Motor Voltage","C*x*x_dot");
+            Vertices(4) = gmt_GraphVertex("Motor Voltage","C*x*x_dot","External");
+            Vertices(5) = gmt_GraphVertex("Vehicle Velocity","J*x_dot","External");
 
             % Define Edges 
-            Edges(1) = gmt_GraphEdge("Electrical to Mechanical Power","kv*xt*xh");
-            Edges(2) = gmt_GraphEdge("Mechanical Heat Rejected","b*xt^2+c*xt");
-            Edges(3) = gmt_GraphEdge("Electrical Heat Rejected","R*xt^2");
-            Edges(4) = gmt_GraphEdge("Electrical Input Power","1*xt*xh");
+            Edges(1) = gmt_GraphEdge("Electrical to Mechanical","kv*xt*xh");
+            Edges(2) = gmt_GraphEdge("Electrical to Thermal","R*xt^2");
+            Edges(3) = gmt_GraphEdge("Mechanical to Thermal","b*xt^2+c*xt");
+            Edges(4) = gmt_GraphEdge("Electrical Input","1*xt*xh");
+            Edges(5) = gmt_GraphEdge("Mechanical Output","1*xt*xh");
 
             % Define Edge Matrix
             EdgeMatrix = [1  2; ...
-                          2  3; ...
                           1  3; ...
-                          4  1]; 
+                          2  3; ...
+                          4  1; ...
+                          2  5]; 
 
             % Creates an Engine Object 
-            obj@gmt_ComponentGraph(ObjectName,EdgeMatrix,Edges,Vertices);
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices);
+
+            % Define Available Connection Ports 
+            % obj.ConnectionPorts(1) = gmt_ConnectionPort(obj,"EdgeConnection",1,"Electrical");
+            % obj.ConnectionPorts(2) = gmt_ConnectionPort(obj,"EdgeConnection",5,"Mechanical");
+
         end
     end
 end

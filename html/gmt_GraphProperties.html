@@ -9,7 +9,7 @@ To make changes, update the MATLAB code and republish this document.
 <title>gmt_GraphProperties</title>
 <meta name="generator" content="MATLAB 25.1">
 <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
-<meta name="DC.date" content="2025-10-28">
+<meta name="DC.date" content="2025-11-18">
 <meta name="DC.source" content="gmt_GraphProperties.m">
 <style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
@@ -91,7 +91,7 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
         M <span class="typesection">double </span><span class="comment">% Incident Matrix</span>
         Nv <span class="typesection">double </span><span class="comment">% Number of vertices</span>
         Ne <span class="typesection">double </span><span class="comment">% Number of edges</span>
-        NvB <span class="typesection">double </span><span class="comment">% Number of Boundary Vertices</span>
+        <span class="comment">% NvB double % Number of Boundary Vertices, Obsolete</span>
         Ns <span class="typesection">double </span><span class="comment">% Number of States</span>
         GraphValidity <span class="comment">% object of graph validity logical statements</span>
     <span class="keyword">end</span>
@@ -144,7 +144,7 @@ classdef gmt_GraphProperties
         M double % Incident Matrix 
         Nv double % Number of vertices 
         Ne double % Number of edges
-        NvB double % Number of Boundary Vertices
+        % NvB double % Number of Boundary Vertices, Obsolete 
         Ns double % Number of States
         GraphValidity % object of graph validity logical statements 
     end

@@ -9,7 +9,7 @@ To make changes, update the MATLAB code and republish this document.
 <title>gmt_ComponentGraph</title>
 <meta name="generator" content="MATLAB 25.1">
 <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
-<meta name="DC.date" content="2025-10-28">
+<meta name="DC.date" content="2025-11-18">
 <meta name="DC.source" content="gmt_ComponentGraph.m">
 <style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
@@ -95,10 +95,25 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 <a href="#5">Update Power Equation</a>
 </li>
 <li>
-<a href="#7">State Variable Names</a>
+<a href="#6">Update State Derivative Equation</a>
 </li>
 <li>
-<a href="#8">Update Power Equations for Each Dynamic Vertex</a>
+<a href="#7">Update Component System of Equations</a>
+</li>
+<li>
+<a href="#8">Update Edge amd Vertex Tables</a>
+</li>
+<li>
+<a href="#10">State Variable Names</a>
+</li>
+<li>
+<a href="#11">Update Power Equations for Each Dynamic Vertex</a>
+</li>
+<li>
+<a href="#12">Update State Derivative Equation</a>
+</li>
+<li>
+<a href="#13">Create System of Equations</a>
 </li>
 </ul>
 </div>
@@ -108,6 +123,7 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 <span class="keyword">classdef</span> gmt_ComponentGraph &lt; gmt_Graph
 
     <span class="keyword">properties</span>
+
     <span class="keyword">end</span>
 
     <span class="keyword">methods</span>
@@ -124,28 +140,39 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 <h2 id="5">Update Power Equation</h2>
 <pre class="codeinput">            obj = UpdatePowerEq(obj);
 </pre>
+<h2 id="6">Update State Derivative Equation</h2>
+<pre class="codeinput">            obj = UpdateXDotEq(obj);
+</pre>
+<h2 id="7">Update Component System of Equations</h2>
+<pre class="codeinput">            obj = UpdateSysEqn(obj);
+</pre>
+<h2 id="8">Update Edge amd Vertex Tables</h2>
+<pre class="codeinput">            obj = gmt_EdgeTable(obj);
+            obj = gmt_VertexTable(obj);
+</pre>
 <pre class="codeinput">        <span class="keyword">end</span>
 </pre>
-<h2 id="7">State Variable Names</h2>
+<h2 id="10">State Variable Names</h2>
 <pre class="codeinput">        <span class="keyword">function</span> obj = ComponentStateVariables(obj)
             <span class="comment">% Updates edge equations with updated state variable names</span>
             tmp = 1;
             <span class="keyword">for</span> i = 1:obj.GraphProperties.Nv
                 <span class="keyword">if</span> obj.Vertices(i).StateType == gmt_StateType.Dynamic
-                    obj.statevarNames(tmp) = obj.Vertices(i).StateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
                     tmp = tmp + 1;
                     <span class="keyword">for</span> j = 1:obj.GraphProperties.Ne
-                        <span class="keyword">if</span> contains(obj.Edges(j).Eq,<span class="string">"xh"</span>) &amp;&amp; obj.GraphProperties.M(i,j) == 1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,<span class="string">"xh"</span>,obj.Vertices(i).StateVariable);
-                        <span class="keyword">elseif</span> contains(obj.Edges(j).Eq,<span class="string">"xt"</span>) &amp;&amp; obj.GraphProperties.M(i,j) == -1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,<span class="string">"xt"</span>,obj.Vertices(i).StateVariable);
+                        <span class="keyword">if</span> contains(obj.Edges(j).EdgeEq,<span class="string">"xh"</span>) &amp;&amp; obj.GraphProperties.M(i,j) == 1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,<span class="string">"xh"</span>,obj.Vertices(i).GenStateVariable);
+                        <span class="keyword">elseif</span> contains(obj.Edges(j).EdgeEq,<span class="string">"xt"</span>) &amp;&amp; obj.GraphProperties.M(i,j) == -1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,<span class="string">"xt"</span>,obj.Vertices(i).GenStateVariable);
                         <span class="keyword">end</span>
                     <span class="keyword">end</span>
                 <span class="keyword">end</span>
             <span class="keyword">end</span>
         <span class="keyword">end</span>
 </pre>
-<h2 id="8">Update Power Equations for Each Dynamic Vertex</h2>
+<h2 id="11">Update Power Equations for Each Dynamic Vertex</h2>
 <pre class="codeinput">        <span class="keyword">function</span> obj = UpdatePowerEq(obj)
             <span class="comment">% Performs summation of power equations for each dynamic vertex</span>
             <span class="keyword">for</span> i = 1:obj.GraphProperties.Nv
@@ -154,7 +181,7 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
                     <span class="keyword">for</span> j = 1:obj.GraphProperties.Ne
                         prev_final_tmp = final_tmp;
                         <span class="keyword">if</span> abs(obj.GraphProperties.M(i,j)) &gt; 0
-                            par_tmp = strcat(<span class="string">"("</span>,obj.Edges(j).Eq,<span class="string">")"</span>);
+                            par_tmp = strcat(<span class="string">"("</span>,obj.Edges(j).EdgeEq,<span class="string">")"</span>);
                             <span class="keyword">if</span> sign(obj.GraphProperties.M(i,j)) == -1
                                 final_tmp = strcat(<span class="string">"-"</span>,par_tmp);
                             <span class="keyword">else</span>
@@ -168,8 +195,32 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
                             obj.Vertices(i) = gmt_PowerEqUpdate(obj.Vertices(i),final_tmp);
                         <span class="keyword">end</span>
                     <span class="keyword">end</span>
+                    obj.Vertices(i) = obj.Vertices(i).gmt_ComputeCapacitance;
                 <span class="keyword">end</span>
             <span class="keyword">end</span>
+        <span class="keyword">end</span>
+</pre>
+<h2 id="12">Update State Derivative Equation</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = UpdateXDotEq(obj)
+            <span class="comment">% Update X_dot equations for each vertex</span>
+            <span class="keyword">for</span> i = 1:obj.GraphProperties.Nv
+                obj.Vertices(i) = obj.Vertices(i).gmt_XDotEq;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+</pre>
+<h2 id="13">Create System of Equations</h2>
+<p>Need to check if state division is required 11/17/2025</p>
+<pre class="codeinput">        <span class="keyword">function</span> obj = UpdateSysEqn(obj)
+            <span class="comment">% Creates a system of equations with states as inputs.</span>
+            idx_tmp = 1;
+            <span class="keyword">for</span> i = 1:obj.GraphProperties.Nv
+                <span class="keyword">if</span> obj.Vertices(i).VertexType == gmt_VertexType.Internal
+                    SysEqn_tmp(idx_tmp,1) = {convertStringsToChars(obj.Vertices(i).X_Dot_Eq)};
+                    idx_tmp = idx_tmp + 1;
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+            SysEqnSym_tmp = str2sym(SysEqn_tmp);
+            obj.SysEqn = symfun(SysEqnSym_tmp,sym(obj.States));
         <span class="keyword">end</span>
 </pre>
 <pre class="codeinput">    <span class="keyword">end</span>
@@ -188,6 +239,7 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 classdef gmt_ComponentGraph < gmt_Graph
 
     properties
+        
     end
 
     methods  
@@ -199,27 +251,33 @@ classdef gmt_ComponentGraph < gmt_Graph
             obj = ComponentStateVariables(obj);
             %% Update Power Equation
             obj = UpdatePowerEq(obj);
+            %% Update State Derivative Equation 
+            obj = UpdateXDotEq(obj);
+            %% Update Component System of Equations 
+            obj = UpdateSysEqn(obj);
+            %% Update Edge amd Vertex Tables
+            obj = gmt_EdgeTable(obj);
+            obj = gmt_VertexTable(obj);
         end
-
         %% State Variable Names
         function obj = ComponentStateVariables(obj)
             % Updates edge equations with updated state variable names 
             tmp = 1;
             for i = 1:obj.GraphProperties.Nv
                 if obj.Vertices(i).StateType == gmt_StateType.Dynamic
-                    obj.statevarNames(tmp) = obj.Vertices(i).StateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
                     tmp = tmp + 1;
                     for j = 1:obj.GraphProperties.Ne 
-                        if contains(obj.Edges(j).Eq,"xh") && obj.GraphProperties.M(i,j) == 1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xh",obj.Vertices(i).StateVariable);
-                        elseif contains(obj.Edges(j).Eq,"xt") && obj.GraphProperties.M(i,j) == -1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xt",obj.Vertices(i).StateVariable);
+                        if contains(obj.Edges(j).EdgeEq,"xh") && obj.GraphProperties.M(i,j) == 1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,"xh",obj.Vertices(i).GenStateVariable);
+                        elseif contains(obj.Edges(j).EdgeEq,"xt") && obj.GraphProperties.M(i,j) == -1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,"xt",obj.Vertices(i).GenStateVariable);
                         end
                     end
                 end
             end
         end
-
         %% Update Power Equations for Each Dynamic Vertex
         function obj = UpdatePowerEq(obj)
             % Performs summation of power equations for each dynamic vertex
@@ -228,8 +286,8 @@ classdef gmt_ComponentGraph < gmt_Graph
                     final_tmp = "";
                     for j = 1:obj.GraphProperties.Ne
                         prev_final_tmp = final_tmp;
-                        if abs(obj.GraphProperties.M(i,j)) > 0 
-                            par_tmp = strcat("(",obj.Edges(j).Eq,")");
+                        if abs(obj.GraphProperties.M(i,j)) > 0
+                            par_tmp = strcat("(",obj.Edges(j).EdgeEq,")");
                             if sign(obj.GraphProperties.M(i,j)) == -1
                                 final_tmp = strcat("-",par_tmp);
                             else
@@ -243,8 +301,32 @@ classdef gmt_ComponentGraph < gmt_Graph
                             obj.Vertices(i) = gmt_PowerEqUpdate(obj.Vertices(i),final_tmp);
                         end
                     end
+                    obj.Vertices(i) = obj.Vertices(i).gmt_ComputeCapacitance;
+                end
+            end    
+        end
+        
+        %% Update State Derivative Equation
+        function obj = UpdateXDotEq(obj)
+            % Update X_dot equations for each vertex 
+            for i = 1:obj.GraphProperties.Nv
+                obj.Vertices(i) = obj.Vertices(i).gmt_XDotEq;
+            end
+        end
+
+        %% Create System of Equations 
+        % Need to check if state division is required 11/17/2025
+        function obj = UpdateSysEqn(obj)
+            % Creates a system of equations with states as inputs. 
+            idx_tmp = 1;
+            for i = 1:obj.GraphProperties.Nv
+                if obj.Vertices(i).VertexType == gmt_VertexType.Internal
+                    SysEqn_tmp(idx_tmp,1) = {convertStringsToChars(obj.Vertices(i).X_Dot_Eq)};
+                    idx_tmp = idx_tmp + 1;
                 end
             end
+            SysEqnSym_tmp = str2sym(SysEqn_tmp);
+            obj.SysEqn = symfun(SysEqnSym_tmp,sym(obj.States));
         end
     end
 end

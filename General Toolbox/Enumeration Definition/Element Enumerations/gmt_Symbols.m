@@ -4,7 +4,7 @@
 classdef gmt_Symbols
 
     properties (SetAccess = private)
-       Symbols string = ["+", "-", "*", "/"] 
+       Symbols string = ["+", "-", "*", "/" ,"^"] 
     end
     
     methods

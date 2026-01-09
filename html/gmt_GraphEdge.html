@@ -9,7 +9,7 @@ To make changes, update the MATLAB code and republish this document.
 <title>gmt_GraphEdge</title>
 <meta name="generator" content="MATLAB 25.1">
 <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
-<meta name="DC.date" content="2025-10-28">
+<meta name="DC.date" content="2025-11-18">
 <meta name="DC.source" content="gmt_GraphEdge.m">
 <style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
@@ -93,9 +93,8 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 <span class="keyword">classdef</span> gmt_GraphEdge
 
 <span class="keyword">properties</span>
-    Name <span class="typesection">string </span><span class="comment">% User specified name to define an edge object</span>
-    Eq <span class="typesection">string </span><span class="comment">% User specified formula defining the edge equation</span>
-
+    EdgeName <span class="typesection">string </span><span class="comment">% User specified name to define an edge object</span>
+    EdgeEq <span class="typesection">string </span><span class="comment">% User specified formula defining the edge equation</span>
 <span class="keyword">end</span>
 
 <span class="keyword">properties</span> (SetAccess = protected)
@@ -105,45 +104,47 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 <span class="keyword">methods</span>
 </pre>
 <h2 id="2">Constructor Method</h2>
-<pre class="codeinput">    <span class="keyword">function</span> obj = gmt_GraphEdge(Name,Equation)
-        <span class="comment">% Generates instance of gmt_GraphEdge object</span>
-        Name_data_valid = isa(Name,<span class="string">'string'</span>);
-        Equation_data_valid = isa(Equation,<span class="string">'string'</span>);
+<p>Generates instance of gmt_GraphEdge object</p>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_GraphEdge(EdgeName,EdgeEq)
+            <span class="comment">% Verify edge name is a string</span>
+            Name_data_valid = isa(EdgeName,<span class="string">'string'</span>);
+            <span class="comment">% Verify edge equation is a string</span>
+            Equation_data_valid = isa(EdgeEq,<span class="string">'string'</span>);
 
-        <span class="comment">% Determine if name input is empty</span>
-        <span class="keyword">if</span> Name_data_valid
-            Name_blank = logical(strlength(Name)==0);
-            <span class="keyword">if</span> Name_blank
-                error(<span class="string">"Name field is empty"</span>)
+            <span class="comment">% Determine if edge name input is empty</span>
+            <span class="keyword">if</span> Name_data_valid
+                Name_blank = logical(strlength(EdgeName)==0);
+                <span class="keyword">if</span> Name_blank
+                    error(<span class="string">"Name field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Name field data type is not a string"</span>)
             <span class="keyword">end</span>
-        <span class="keyword">else</span>
-            error(<span class="string">"Name field data type is not a string"</span>)
-        <span class="keyword">end</span>
 
-        <span class="comment">% Determine if CapEquation input is empty</span>
-        <span class="keyword">if</span> Equation_data_valid
-            Equation_blank = logical(strlength(Equation)==0);
-            <span class="keyword">if</span> Equation_blank
-                error(<span class="string">"Equation field is empty"</span>)
+            <span class="comment">% Determine if edge equation input is empty</span>
+            <span class="keyword">if</span> Equation_data_valid
+                Equation_blank = logical(strlength(EdgeEq)==0);
+                <span class="keyword">if</span> Equation_blank
+                    error(<span class="string">"Equation field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Equation field data type is not a string"</span>)
             <span class="keyword">end</span>
-        <span class="keyword">else</span>
-            error(<span class="string">"Equation field data type is not a string"</span>)
+
+            <span class="comment">% Assign input variable name to EdgeName property</span>
+            obj.EdgeName = EdgeName;
+            <span class="comment">% Assign input variable equation to EdgeEq property</span>
+            obj.EdgeEq = EdgeEq;
+
+            <span class="comment">% Determine whether edge is internal or external</span>
+            <span class="keyword">if</span> (contains(EdgeEq,<span class="string">"xt"</span>) == true || contains(EdgeEq,<span class="string">"xh"</span>) == true)
+                obj.EdgeType = gmt_EdgeType.Internal;
+            <span class="keyword">else</span>
+                obj.EdgeType = gmt_EdgeType.External;
+            <span class="keyword">end</span>
         <span class="keyword">end</span>
-
-        obj.Name = Name; <span class="comment">% Assigns input variable Name to Edge_Name property</span>
-        obj.Eq = Equation; <span class="comment">% Assigns input variable Equation to Edge_Eq property</span>
-
-        <span class="keyword">if</span> (contains(Equation,<span class="string">"xt"</span>) == true || contains(Equation,<span class="string">"xh"</span>) == true)
-            obj.EdgeType = gmt_EdgeType.Internal;
-        <span class="keyword">else</span>
-            obj.EdgeType = gmt_EdgeType.External;
-        <span class="keyword">end</span>
-
-    <span class="keyword">end</span>
 </pre>
-<pre class="codeinput">
-<span class="keyword">end</span>
-
+<pre class="codeinput">    <span class="keyword">end</span>
 <span class="keyword">end</span>
 </pre>
 <p class="footer">
@@ -159,9 +160,8 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 classdef gmt_GraphEdge
 
 properties
-    Name string % User specified name to define an edge object
-    Eq string % User specified formula defining the edge equation 
-
+    EdgeName string % User specified name to define an edge object
+    EdgeEq string % User specified formula defining the edge equation 
 end
 
 properties (SetAccess = protected)
@@ -170,45 +170,47 @@ end
 
 methods
 
-    %% Constructor Method
-    function obj = gmt_GraphEdge(Name,Equation)
+        %% Constructor Method
         % Generates instance of gmt_GraphEdge object
-        Name_data_valid = isa(Name,'string');
-        Equation_data_valid = isa(Equation,'string');
-
-        % Determine if name input is empty
-        if Name_data_valid
-            Name_blank = logical(strlength(Name)==0);
-            if Name_blank 
-                error("Name field is empty")
+        function obj = gmt_GraphEdge(EdgeName,EdgeEq)
+            % Verify edge name is a string 
+            Name_data_valid = isa(EdgeName,'string');
+            % Verify edge equation is a string
+            Equation_data_valid = isa(EdgeEq,'string');
+    
+            % Determine if edge name input is empty
+            if Name_data_valid
+                Name_blank = logical(strlength(EdgeName)==0);
+                if Name_blank 
+                    error("Name field is empty")
+                end
+            else
+                error("Name field data type is not a string")
             end
-        else
-            error("Name field data type is not a string")
-        end
-
-        % Determine if CapEquation input is empty
-        if Equation_data_valid
-            Equation_blank = logical(strlength(Equation)==0);
-            if Equation_blank
-                error("Equation field is empty")
+    
+            % Determine if edge equation input is empty
+            if Equation_data_valid
+                Equation_blank = logical(strlength(EdgeEq)==0);
+                if Equation_blank
+                    error("Equation field is empty")
+                end
+            else 
+                error("Equation field data type is not a string")
             end
-        else 
-            error("Equation field data type is not a string")
+            
+            % Assign input variable name to EdgeName property 
+            obj.EdgeName = EdgeName; 
+            % Assign input variable equation to EdgeEq property 
+            obj.EdgeEq = EdgeEq;
+    
+            % Determine whether edge is internal or external
+            if (contains(EdgeEq,"xt") == true || contains(EdgeEq,"xh") == true)
+                obj.EdgeType = gmt_EdgeType.Internal;
+            else
+                obj.EdgeType = gmt_EdgeType.External;
+            end
         end
-
-        obj.Name = Name; % Assigns input variable Name to Edge_Name property 
-        obj.Eq = Equation; % Assigns input variable Equation to Edge_Eq property 
-
-        if (contains(Equation,"xt") == true || contains(Equation,"xh") == true)
-            obj.EdgeType = gmt_EdgeType.Internal;
-        else
-            obj.EdgeType = gmt_EdgeType.External;
-        end
-
     end
-
-end
-
 end
 ##### SOURCE END #####
 -->

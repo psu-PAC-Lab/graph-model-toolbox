@@ -3,7 +3,7 @@
 
 
 %% Class Defintion and Superclass Reference
-classdef gmt_RecipEngineModel < gmt_ComponentGraph
+classdef gmt_RecipEngineModel < gmt_Graph
 
     %% Properties
     properties
@@ -17,8 +17,8 @@ classdef gmt_RecipEngineModel < gmt_ComponentGraph
             % Define Vertices 
             Vertices(1) = gmt_GraphVertex("Tank Mass","Qhv*x_dot");
             Vertices(2) = gmt_GraphVertex("Angular Velocity","J*x*x_dot");
-            Vertices(3) = gmt_GraphVertex("Cooling Heat Sink", "1");
-            Vertices(4) = gmt_GraphVertex("Ambient Heat Sink", "1");
+            Vertices(3) = gmt_GraphVertex("Cooling Heat Sink", "1","External");
+            Vertices(4) = gmt_GraphVertex("Ambient Heat Sink", "1","External");
 
             % Define Edges 
             Edges(1) = gmt_GraphEdge("Chemical Power","Qhv*xh*u1");
@@ -26,10 +26,12 @@ classdef gmt_RecipEngineModel < gmt_ComponentGraph
             Edges(3) = gmt_GraphEdge("Ambient Heat Rejection", "0.40*Qhv*xt*u1");
 
             % Define Edge Matrix 
-            EdgeMatrix = [1 2;2 4;2 3];
+            EdgeMatrix = [1 2;...
+                          2 3;...
+                          2 4];
 
             % Creates an Engine Object 
-            obj@gmt_ComponentGraph(ObjectName,EdgeMatrix,Edges,Vertices);
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices);
         end
     end
 end

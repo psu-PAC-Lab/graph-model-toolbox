@@ -6,6 +6,8 @@ classdef gmt_GraphProperties
         Ne double % Number of edges
         % NvB double % Number of Boundary Vertices, Obsolete 
         Ns double % Number of States
+        NsD double % Number of dynamic states
+        NsA double % Number of algebraic states
         GraphValidity % object of graph validity logical statements 
     end
 

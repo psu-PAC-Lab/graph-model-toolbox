@@ -5,6 +5,7 @@ classdef gmt_EnergyDomain
         Electrical 
         Thermal 
         Hydraulic 
-        Chemical 
+        Chemical
+        Unassigned
     end
 end

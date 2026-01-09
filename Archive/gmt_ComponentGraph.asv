@@ -19,6 +19,9 @@ classdef gmt_ComponentGraph < gmt_Graph
             obj = UpdateXDotEq(obj);
             %% Update Component System of Equations 
             obj = UpdateSysEqn(obj);
+            %% Update Edge amd Vertex Tables
+            obj = gmt_EdgeTable(obj);
+            obj = gmt_VertexTable(obj);
         end
         %% State Variable Names
         function obj = ComponentStateVariables(obj)
@@ -26,20 +29,21 @@ classdef gmt_ComponentGraph < gmt_Graph
             tmp = 1;
             for i = 1:obj.GraphProperties.Nv
                 if obj.Vertices(i).StateType == gmt_StateType.Dynamic
-                    obj.statevarGenNames(tmp) = obj.Vertices(i).GenStateVariable;
-                    obj.statevarGenNames(tmp) = obj.Vertices(i).GenStateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
+                    obj.States(tmp) = obj.Vertices(i).GenStateVariable;
                     tmp = tmp + 1;
                     for j = 1:obj.GraphProperties.Ne 
-                        if contains(obj.Edges(j).Eq,"xh") && obj.GraphProperties.M(i,j) == 1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xh",obj.Vertices(i).GenStateVariable);
-                        elseif contains(obj.Edges(j).Eq,"xt") && obj.GraphProperties.M(i,j) == -1
-                           obj.Edges(j).Eq = replace(obj.Edges(j).Eq,"xt",obj.Vertices(i).GenStateVariable);
+                        if contains(obj.Edges(j).EdgeEq,"xh") && obj.GraphProperties.M(i,j) == 1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,"xh",obj.Vertices(i).GenStateVariable);
+                        elseif contains(obj.Edges(j).EdgeEq,"xt") && obj.GraphProperties.M(i,j) == -1
+                           obj.Edges(j).EdgeEq = replace(obj.Edges(j).EdgeEq,"xt",obj.Vertices(i).GenStateVariable);
                         end
                     end
                 end
             end
         end
         %% Update Power Equations for Each Dynamic Vertex
+        % Updates power equation for each dynamic 
         function obj = UpdatePowerEq(obj)
             % Performs summation of power equations for each dynamic vertex
             for i = 1:obj.GraphProperties.Nv
@@ -48,7 +52,7 @@ classdef gmt_ComponentGraph < gmt_Graph
                     for j = 1:obj.GraphProperties.Ne
                         prev_final_tmp = final_tmp;
                         if abs(obj.GraphProperties.M(i,j)) > 0
-                            par_tmp = strcat("(",obj.Edges(j).Eq,")");
+                            par_tmp = strcat("(",obj.Edges(j).EdgeEq,")");
                             if sign(obj.GraphProperties.M(i,j)) == -1
                                 final_tmp = strcat("-",par_tmp);
                             else
@@ -62,9 +66,11 @@ classdef gmt_ComponentGraph < gmt_Graph
                             obj.Vertices(i) = gmt_PowerEqUpdate(obj.Vertices(i),final_tmp);
                         end
                     end
+                    obj.Vertices(i) = obj.Vertices(i).gmt_ComputeCapacitance;
                 end
-            end
+            end    
         end
+        
         %% Update State Derivative Equation
         function obj = UpdateXDotEq(obj)
             % Update X_dot equations for each vertex 
@@ -72,17 +78,20 @@ classdef gmt_ComponentGraph < gmt_Graph
                 obj.Vertices(i) = obj.Vertices(i).gmt_XDotEq;
             end
         end
+
         %% Create System of Equations 
+        % Need to check if state division is required 11/17/2025
         function obj = UpdateSysEqn(obj)
-            % Add each X_dot equation for each vertex 
+            % Creates a system of equations with states as inputs. 
             idx_tmp = 1;
             for i = 1:obj.GraphProperties.Nv
                 if obj.Vertices(i).VertexType == gmt_VertexType.Internal
-                    SysEqn_tmp(idx_tmp,1) = {obj.Vertices(i).X_Dot_Eq};
+                    SysEqn_tmp(idx_tmp,1) = {convertStringsToChars(obj.Vertices(i).X_Dot_Eq)};
                     idx_tmp = idx_tmp + 1;
                 end
             end
-            obj.SysEqn =
+            SysEqnSym_tmp = str2sym(SysEqn_tmp);
+            obj.SysEqn = symfun(SysEqnSym_tmp,sym(obj.States));
         end
     end
 end
