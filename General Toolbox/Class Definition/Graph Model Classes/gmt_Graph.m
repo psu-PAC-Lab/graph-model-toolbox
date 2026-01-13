@@ -6,34 +6,38 @@ classdef gmt_Graph
         % User Define Meta Data
         Name string % Name of the graph model
         EdgeMatrix double % An edge matrix defining connections between edges and vertices
-        Edges % A vector of edge objects
-        Vertices % A vector of vertex objects
-        ConnectionPorts gmt_ConnectionPort % Object containing graph model connection points 
+        Edges gmt_Edge % A vector of edge objects
+        Vertices gmt_Vertex % A vector of vertex objects
         Properties gmt_GraphProperties % Object containing overall graph properties
-        DiGraph % A directed graph Object
-        States string % Cell array of generic state variable names
-        Inputs string = [] % Cell array of system inputs
-        ModelParameters % Model parameters object to manage model parameterization  
+        DiGraph % MATLAB native directed graph object
+        Inputs string = [] % String array of system input variable names
+        States string % String array of system state variable names
+        Outputs string = [] % String array of system output variable names
+        %Disturbances string = [] % String array of system disturbance variable names
+        ModelParameters gmt_ModelParameter % Model parameters object to manage model parameterization  
         EdgeTable table % Human readable summary of edge data
         VertexTable table % Human readable summary of vertex data
-        SysEqn sym % System of equations for component
+        SystemEquations string % Symbolic system of equations for system
+        MassMatrix % Mass Matrix for ODE Solver 
+        Ports gmt_Port % Object containing graph model connection points
+        MfileCode 
+        ModelType gmt_ModelType % Determines model type for post analysis
     end
 
-    methods 
+    %% Public Methods 
+    methods (Access = public)
         %% Constructor Graph 
-        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices)
+        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters)
             % Generates instance of gmt_Graph object
             % Assign Data
             obj.Name = Name;
             obj.EdgeMatrix = EdgeMatrix;
             obj.Edges = Edges;
             obj.Vertices = Vertices;
+            obj.ModelParameters = Parameters;
 
             % Compute Basic Graph Properties (Nv, Ne, and M) 
             obj.Properties = gmt_GraphProperties(obj);
-
-            % Update Properties 
-            obj = gmt_PropertyUpdate(obj);
 
             % Graph Update
             obj = gmt_GraphUpdate(obj);
@@ -42,45 +46,14 @@ classdef gmt_Graph
             obj = gmt_ModelUpdate(obj);
 
             % Compute and Update Edge and Vertex Table Data 
-            % obj = gmt_EdgeVertexTable(obj);
+            %obj = gmt_EdgeVertexTable(obj);
 
-        end
-
-        %% Property Update
-        % Function performs validation checks, computes and updates graph properties
-        function obj = gmt_PropertyUpdate(obj)
-            % Updates graph properties object and performs validation checks
-            if obj.Properties.GraphValidity.GraphValid && obj.Properties.GraphValidity.VerticesValid && obj.Properties.GraphValidity.EdgesValid
-                % Compute Boundary Vertices
-                obj.Properties.Ns = 0;
-                for j = 1:obj.Properties.Nv
-                    % Grab non-zero elements on each vertices 
-                    tmp = obj.Properties.M(j,obj.Properties.M(j,:)~=0);
-                    % Determine total number of edges
-                    tmp_lgth = length(tmp);
-                    % Take the max of all positive or all negative
-                    tmp_sum = max(sum(abs(tmp(tmp==-1))),sum(tmp(tmp==1)));
-                    % If all the elements match one direction, it is a boundary vertex
-                    V_bv(j) = logical(tmp_sum == tmp_lgth);
-                    % Update exogeny of each vertex 
-                    % obj.Vertices(j) = obj.Vertices(j).gmt_VertexTypeUpdate(V_bv(j)); 
-                    % if obj.Vertices(j).VertexType == gmt_VertexType.Internal
-                    %     obj.Properties.Ns = obj.Properties.Ns + 1;
-                    %     obj.Vertices(j) = obj.Vertices(j).gmt_VertexStateVariableUpdate(obj.Properties.Ns);
-                    % end
-                end
-            elseif not(obj.Properties.GraphValidity.GraphValid)
-                error('Error: Edge Matrix is not properly defined. Number of vertices must be greater than or equal to the number of edges')
-            elseif not(obj.Properties.GraphValidity.VerticesValid)
-                error('Error: Number of Vertices specified does not match dimensions of Edge Matrix')
-            elseif not(obj.Properties.GraphValidity.EdgesValid)
-                error('Error: Number of Edges specified does not match dimensions of Edge Matrix')
-            end
+           
         end
 
         %% Edge and Vertex Table Assembly
         % Assembles Vertex Table for readability 
-        function obj = gmt_EdgeVertexTable(obj)
+        function obj = gmt_TableUpdate(obj)
             % Vertex Table
             varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","Capacitance Equation","Power Equation"];
             for idx_tmp = 1:length(varNames_tmp)
@@ -117,8 +90,7 @@ classdef gmt_Graph
         %% Graph Update
         % Function creates MATLAB native graph object and updates properties for plotting  
         function obj = gmt_GraphUpdate(obj)
-
-                      
+         
             % Note need to update naming and graph object information 
 
             % Vertex Color Coding
@@ -194,42 +166,61 @@ classdef gmt_Graph
             p.NodeLabel = {}; 
         end
 
-       
-        %% Graph Combination 
-        % Combines Two Graphs Together 
-        function obj = gmt_GraphCombine(obj, obj2)
-            % Compare Edge Equations Between Models
-            idx_tmp = 1;
-            for i = 1:obj.Properties.Ne 
-                for j = 1:obj2.Properties.Ne
-                    % Determine is same edge equations are present 
-                    if strcmp(obj.Edges(i).EdgeEq,obj2.Edges(j).EdgeEq) == true
-                      % Store Common Edge Equation Indexs  
-                      idx_com_tmp(idx_tmp,1) = i; 
-                      idx_com_tmp(idx_tmp,1) = j; 
-                      idx_tmp = idx_tmp + 1;
-                    end
-                end
-            end
+        function out = gmt_ModelParameters(obj)
+
+            out = obj.ModelParameters;
+
         end
 
         %% Model Update 
         % Once all vertices, edges, and edge matrix has been defined a model can be generated 
         function obj = gmt_ModelUpdate(obj)
 
+            % Updates graph properties object and performs validation checks
+            if obj.Properties.GraphValidity.GraphValid && obj.Properties.GraphValidity.VerticesValid && obj.Properties.GraphValidity.EdgesValid
+                % Compute Boundary Vertices
+                obj.Properties.Ns = 0;
+                for j = 1:obj.Properties.Nv
+                    % Grab non-zero elements on each vertices 
+                    tmp = obj.Properties.M(j,obj.Properties.M(j,:)~=0);
+                    % Determine total number of edges
+                    tmp_lgth = length(tmp);
+                    % Take the max of all positive or all negative
+                    tmp_sum = max(sum(abs(tmp(tmp==-1))),sum(tmp(tmp==1)));
+                    % If all the elements match one direction, it is a boundary vertex
+                    V_bv(j) = logical(tmp_sum == tmp_lgth);
+                    % Update exogeny of each vertex 
+                    % obj.Vertices(j) = obj.Vertices(j).gmt_VertexTypeUpdate(V_bv(j)); 
+                    % if obj.Vertices(j).VertexType == gmt_VertexType.Internal
+                    %     obj.Properties.Ns = obj.Properties.Ns + 1;
+                    %     obj.Vertices(j) = obj.Vertices(j).gmt_VertexStateVariableUpdate(obj.Properties.Ns);
+                    % end
+                end
+            elseif not(obj.Properties.GraphValidity.GraphValid)
+                error('Error: Edge Matrix is not properly defined. Number of vertices must be greater than or equal to the number of edges')
+            elseif not(obj.Properties.GraphValidity.VerticesValid)
+                error('Error: Number of Vertices specified does not match dimensions of Edge Matrix')
+            elseif not(obj.Properties.GraphValidity.EdgesValid)
+                error('Error: Number of Edges specified does not match dimensions of Edge Matrix')
+            end
+
             Tot_Ds_num = 0;
             Tot_As_num  = 0;
+            Tot_y_num = 0;
 
             % Update Graph Specific State and State Derivative Variables 
             for i = 1:obj.Properties.Nv
                 
                 Ds_var_tmp = [];
                 As_var_tmp = [];
+                y_var_tmp = [];
 
                 Ds_var = obj.Vertices(i).StateDerVariables; % Grab vertex specific dynamic state variables name
                 Num_Ds = obj.Vertices(i).NvSd; % Grab total number of dynamic state varables 
                 As_var = obj.Vertices(i).StateVariables; % Grab vertex specific dynamic state variables name
-                Num_As = max(obj.Vertices(i).NvSa,obj.Vertices(i).NvS); % Grab total number of algebraic state varables 
+                Num_As = max(obj.Vertices(i).NvSa,obj.Vertices(i).NvS); % Grab total number of algebraic state varables
+                V_var = obj.Vertices(i).OutputVariables; % Grab vertex specific output variables 
+                Num_y = obj.Vertices(i).NvY; % Grab total number of output variables 
 
                 if isa(Num_Ds,'double') && Num_Ds ~= 0
                     Tot_Ds_num = (1:Num_Ds) + Tot_Ds_num(end); % Compute graph specific dynamic state variable numbering 
@@ -249,7 +240,16 @@ classdef gmt_Graph
                     end
                 end
 
-                obj.Vertices(i) = obj.Vertices(i).gmt_GraphVertexUpdate(Ds_var_tmp,As_var_tmp);
+                if isa(Num_y,"double") && Num_y ~= 0
+                    Tot_y_num = (1:Num_y) + Tot_y_num(end);
+                    if Num_y == 1 && strlength(extractAfter(V_var,"y")) == 0
+                        y_var_tmp = strcat("y",num2str(Tot_y_num));
+                    else
+                        y_var_tmp = regexprep(As_var, '\d+', '${num2str(Tot_As_num(str2double($0)))}');
+                    end
+                end
+
+                obj.Vertices(i) = obj.Vertices(i).gmt_GraphVertexUpdate(Ds_var_tmp,As_var_tmp,y_var_tmp);
 
                 % Update Head and State Vertices Numbers
                 for j = 1:obj.Properties.Ne 
@@ -269,13 +269,20 @@ classdef gmt_Graph
 
             end
 
-            % Create GraphCapacitance 
+            % Update System Variables
 
-            % Compute Power Equation for Each Vertex 
+            % Update System State Variables 
             obj.States = unique([obj.Vertices.GraphStateVariables]);
+
+            % Update System Input Variables
             if ~isempty([obj.Vertices.InputVariables]) || ~isempty([obj.Edges.InputVariables])
                 obj.Inputs = unique([[obj.Vertices.InputVariables],[obj.Edges.InputVariables]]);
             end
+
+            % Update System Output Variables 
+            obj.Outputs = unique([obj.Vertices.GraphOutputVariables]);
+
+            % Update System Disturbance Variables 
 
             % Update Power Equation for Each Edge
             for i = 1:obj.Properties.Nv 
@@ -297,216 +304,279 @@ classdef gmt_Graph
                 obj.Vertices(i) = obj.Vertices(i).gmt_GraphVertexEqUpdate(PowerEq_tmp);
             end
 
-            IntVerices_idx = find([obj.Vertices.VertexType] == gmt_VertexType.Internal);
+            % Determine Equations for Stacking 
+            IntVertices_idx = find([obj.Vertices.StateType] == gmt_StateType.Dynamic);
+            ScalarParams_idx = find([obj.ModelParameters.ParameterType] == gmt_ParameterType.Scalar);
+            LookupParams_idx = find([obj.ModelParameters.ParameterType] == gmt_ParameterType.Lookup);
+            NNParams_idx = find([obj.ModelParameters.ParameterType] == gmt_ParameterType.Neural_Network);
+            OutVertices_idx = find([obj.Vertices.StateType] == gmt_StateType.Algebraic);
 
-            obj.SysEqn = str2sym([obj.Vertices(IntVerices_idx).GraphVertexEq]');
+            % Create string expression for each type
+            sys_dyneq_str_tmp = [obj.Vertices(IntVertices_idx).GraphStateDerVariables]' + " = " + [obj.Vertices(IntVertices_idx).GraphVertexEq]' + ";";
+            sys_algeq_str_tmp = [obj.Vertices(OutVertices_idx).GraphOutputVariables]' + " = " + [obj.Vertices(OutVertices_idx).GraphVertexEq]' + ";";
 
-            mfile_header = "function ["+ join([obj.Vertices(IntVerices_idx).GraphStateDerVaribles],",") + "] = " + obj.Name + "(" + join([obj.States,obj.Inputs],",") + ")";
-            mfile_body = [obj.Vertices(IntVerices_idx).GraphStateDerVaribles]' + " = " + string(obj.SysEqn)+";";
-            mfile_footer = "end";
-            mfile_combined = [mfile_header;mfile_body;mfile_footer];
+            % Stack string expression on top of each other
+            sys_eq_str_tmp = [sys_dyneq_str_tmp;sys_algeq_str_tmp];
 
-            writelines(mfile_combined, obj.Name + "_Script.m")
+            % Create a MATLAB symbolic equation 
+            obj.SystemEquations = sys_eq_str_tmp; %str2sym(sys_eq_str_tmp);
+            % obj.MassMatrix = 
+            % obj.SysEqnType = 
+
+            % Determine Model Type 
+            if any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Lookup) || any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Neural_Network)
+                obj.ModelType = gmt_ModelType.Numerical;
+            else
+                obj.ModelType = gmt_ModelType.Analytical;
+            end
+
+            %% Create System M File
+            % TASK: Make user defined input to generated this function 
+            makeFunc_mfile = 1;
+            if makeFunc_mfile 
+
+                % System Function Header
+                if ispc
+                    user = getenv('USERNAME');
+                else
+                    user = getenv('USER');
+                end
+
+                sysfun_mfile_preheader = "% Code-Auto Generated By " + user + " using gmt Toolbox on " + string(datetime);
+
+                if ~isempty(obj.Inputs)
+                    sysfun_mfile_header = "function res = sysFun_" + obj.Name + "(t,y," + strjoin([obj.Inputs],",") + ")";
+                else
+                    sysfun_mfile_header = "function res = sysFun_" + obj.Name + "(t,y)";
+                end
+                sysfun_mfile_footer = "end";
+    
+                % System Function Input Parser 
+                inputvar_list = [[obj.Vertices(IntVertices_idx).GraphStateVariables]';[obj.Vertices(OutVertices_idx).GraphOutputVariables]'];
+                unpackingCode = "";
+                for i = 1:length(inputvar_list)
+                    unpackingCode(i) = inputvar_list(i) + " = y(" + i + ");";
+                end
+                
+                sysfun_mfile_prefix = unpackingCode';
+
+                % System Model Parameters Parser 
+
+                % Scalars 
+                sysfun_mfile_scalars = [obj.ModelParameters(ScalarParams_idx).Variable]' + " = " + [obj.ModelParameters(ScalarParams_idx).Data]' + ";";
+
+                % Lookup
+                if ~isempty(LookupParams_idx)
+
+                    fields = fieldnames(obj.ModelParameters(LookupParams_idx).Data);
+                    mFileLines = cell(length(fields), 1);
+                    
+                    % 3. Loop through fields to create "LHS = RHS;" strings
+                    for i = 1:numel(fields)
+                        fieldName = fields{i};
+                        val = obj.ModelParameters(LookupParams_idx).Data.(fieldName); % Dynamic access
+                    
+                        if ischar(val) || isstring(val)
+                            % Format: FieldName = 'StringData';
+                            rhs = sprintf("'%s'", val);
+                    
+                        elseif isnumeric(val) || islogical(val)
+                            % Format: FieldName = [1 0; 0 1]; or FieldName = 5;
+                            % mat2str handles the brackets and semicolon for matrices
+                            rhs = mat2str(val);
+                    
+                        else
+                            % Fallback for empty or unsupported types
+                            rhs = '[]';
+                        end
+                    
+                        % Combine into the final assignment string
+                        mFileLines{i} = sprintf('%s = %s;', fieldName, rhs);
+                    end
+    
+                    sysfun_mfile_lookup = string(mFileLines);
+
+                else 
+
+                    sysfun_mfile_lookup = [];
+
+                end
+
+                % Neural Networks 
+
+                % System Output Packager 
+                outputvar_list = [[obj.Vertices(IntVertices_idx).GraphStateDerVariables]';[obj.Vertices(OutVertices_idx).GraphOutputVariables]' + "_"];
+                packingCode = "res = [" + strjoin(outputvar_list',";") + "];";
+                sysfun_mfile_suffix = packingCode';
+    
+                % System Function Body 
+                % Create string expression for each type
+                sys_dyneq_str_tmp = [obj.Vertices(IntVertices_idx).GraphStateDerVariables]' + " = " + [obj.Vertices(IntVertices_idx).GraphVertexEq]' + ";";
+                sys_algeq_str_tmp = [obj.Vertices(OutVertices_idx).GraphOutputVariables]'+ "_ = " + [obj.Vertices(OutVertices_idx).GraphVertexEq]' + "-" + [obj.Vertices(OutVertices_idx).GraphOutputVariables]' + ";";
+    
+                % Stack string expression on top of each other
+                sys_eq_str_tmp = [sys_dyneq_str_tmp;sys_algeq_str_tmp];
+    
+                sysfun_mfile_body = sys_eq_str_tmp;
+    
+                sysfun_mfile_combined = ...
+                    [
+                    sysfun_mfile_preheader; ...
+                    sysfun_mfile_header;...
+                    sysfun_mfile_scalars;...
+                    sysfun_mfile_lookup;...
+                    sysfun_mfile_prefix;...
+                    sysfun_mfile_body;...
+                    sysfun_mfile_suffix;...
+                    sysfun_mfile_footer];
+
+                obj.MfileCode = sysfun_mfile_combined;
+    
+                writelines(sysfun_mfile_combined, "sysFun_" + obj.Name + ".m");
+    
+                % Create DAE Mass Matrix 
+                obj.MassMatrix = double(diag(([obj.Vertices.StateType]==gmt_StateType.Dynamic)));
+
+            end
 
         end
         
-        % %% Update Power Equations for Each Dynamic Vertex
-        % function obj = UpdatePowerEq(obj)
-        %     % Performs summation of power equations for each dynamic vertex
-        %     for i = 1:obj.Properties.Nv
-        %         %if obj.Vertices(i).StateType == gmt_StateType.Dynamic
-        %             final_tmp = "";
-        %             for j = 1:obj.Properties.Ne
-        %                 prev_final_tmp = final_tmp;
-        %                 if abs(obj.Properties.M(i,j)) > 0
-        %                     par_tmp = strcat("(",obj.Edges(j).EdgeEq,")");
-        %                     if sign(obj.Properties.M(i,j)) == -1
-        %                         final_tmp = strcat("-",par_tmp);
-        %                     else
-        %                         final_tmp = par_tmp;
-        %                     end
-        %                     if strlength(prev_final_tmp) > 0 && sign(obj.Properties.M(i,j)) == 1
-        %                         final_tmp = strcat(prev_final_tmp,"+",final_tmp);
-        %                     elseif  strlength(prev_final_tmp) > 0 && sign(obj.Properties.M(i,j)) == -1
-        %                         final_tmp = strcat(prev_final_tmp,final_tmp);
-        %                     end
-        %                     obj.Vertices(i) = gmt_PowerEqUpdate(obj.Vertices(i),final_tmp);
-        %                 end
-        %             end
-        %             obj.Vertices(i) = obj.Vertices(i).gmt_ComputeCapacitance;
-        %         %end
-        %     end    
-        % end
-        % 
-        % %% Update State Derivative Equation
-        % function obj = UpdateXDotEq(obj)
-        %     % Update X_dot equations for each vertex 
-        %     for i = 1:obj.Properties.Nv
-        %         obj.Vertices(i) = obj.Vertices(i).gmt_XDotEq;
-        %     end
-        % end
-
-        % %% Update Vertex NvE Values 
-        % function obj = UpdateNvE(obj)
-        %     for i = 1:obj.Properties.Nv
-        %         obj.Vertices(i) = obj.Vertices(i).gmt_VertexNvE(sum(abs(obj.Properties.M(i,:))));
-        %     end
-        % end
-        % 
-        % %% Create System of Equations 
-        % % Need to check if state division is required 11/17/2025
-        % function obj = UpdateSysEqn(obj)
-        %     % Creates a system of equations with states as inputs. 
-        %     idx_tmp = 1;
-        %     for i = 1:obj.Properties.Nv
-        %         if obj.Vertices(i).VertexType == gmt_VertexType.Internal
-        %             SysEqn_tmp(idx_tmp,1) = {convertStringsToChars(obj.Vertices(i).X_Dot_Eq)};
-        %             idx_tmp = idx_tmp + 1;
-        %         end
-        %     end
-        %     SysEqnSym_tmp = str2sym(SysEqn_tmp);
-        %     obj.SysEqn = symfun(SysEqnSym_tmp,sym(obj.States));
-        % end
-        % 
-
     end
     %% Graph Combination Function 
-    methods (Static)
-
-        function objC = gmt_Combine(CompM_Edge,EdgeC,CompM_Vertex,VertexC)
-            % Joe Pisani 12/19/2025 GraphTools uses concept of Ports which are user defined model connection points 
-            % The algorithm C. Aksland uses requires specification of common vertices and edges together. 
-            % Recommend using graph theory to combine graphs, but laplacians are not unique they can only tell us if the combined graph is correct or not. ... 
-            % They are not invertible, meaning they are linear dependent, meaning there are multiplie solutions. 
-            % More details on GraphTools algorithm, an incidence matrix is computed based on head and tail state defintions. 
-            % Chris tells use we must specify the vertex pair to be removed when an edge is removed 
-            % Do we want to use the port concept or be more generic? 
-
-            % Need to update internal and external vertex and edge definition areas 
-
-            % CompM is dimension {:,2}, meaning two components 
-            CompM_Edge_len = size(CompM_Edge,1);
-            CompM_Edge_width = size(CompM_Edge,2);
-            EdgeC_len = size(EdgeC,1);
-
-            CompM_Vertex_len = size(CompM_Vertex,1);
-            CompM_Vertex_width = size(CompM_Vertex,1);
-            VertexC_len = size(VertexC,1);
-
-            if all([~isempty(CompM_Edge),~isempty(EdgeC),CompM_Edge_width == 2,CompM_Edge_len==EdgeC_len])
-                % Valid Edge Connection 
-                % Verify Class Types
-                for i = 1:CompM_Edge_len
-                    for j = 1:2
-                        if isa(CompM_Edge(i,j),"gmt_Graph")
-                            error("Not all components being combined are of class gmt_Graph")
-                            break;
-                        end   
-                    end
-                end
-
-
-
-            elseif all([~isempty(CompM_Vertex),~isempty(VertexC),CompM_Vertex_width == 2,CompM_Vertex_len==VertexC_len])
-                % Valid Vertex Connection 
-                % Verify Class Types
-                for i = 1:CompM_Vertex_len
-                    for j = 1:2
-                        if isa(CompM_Vertex(i,j),"gmt_Graph")
-                            error("Not all components being combined are of class gmt_Graph")
-                            break;
-                        end
-                            
-                    end
-                end
-            end
-                
-
-            % Verify The Inputs Are gmt_Graph
-
-            % Compute Each Matrix Sizes  
-            A = CompM_Edge(i,1).Properties.M;
-            B = CompM_Edge(j,1).Properties.M;
-
-            sz_A_r = size(A,1);
-            sz_A_c = size(A,2);
-            sz_B_r = size(B,1);
-            sz_B_c = size(B,2);
-            sz_C_r = sz_A_r + sz_B_r;
-            sz_C_c = sz_A_c + sz_B_c - 1;
-            
-            % Create New Matrix of Zeros 
-            C = zeros(sz_C_r,sz_C_c);
-            
-            idx = 1;
-            
-            close all
-            % Search Each Edge Combination in A and B 
-            for k = 1:sz_A_c
-                for l = 1:sz_B_c
-            
-                    % Creat Combination Vector
-                    cm_c = [k, l];
-            
-                    % Rearrange Columns of A
-                    A_c_tmp = 1:1:sz_A_c;
-                    A_c_tmp(:,cm_c(1)) = [];
-                    A_tmp = [A(:,A_c_tmp),A(:,cm_c(1))];
-                    % 
-                    % [G, Nv, Ne] = gmtbGraph(A_tmp);
-                    % figure
-                    % plot(G,'Layout','force')
-                    % 
-                    % Rearrange Columns of B
-                    B_c_tmp = 1:1:sz_B_c;
-                    B_c_tmp(:,cm_c(2)) = [];
-                    B_tmp = [B(:,cm_c(2)), B(:,B_c_tmp)];
-            
-                    % [G, Nv, Ne] = gmtbGraph(B_tmp);
-                    % figure
-                    % plot(G,'Layout','force')
-            
-                    D(1:sz_A_r,1:sz_A_c) = A_tmp;
-                    D(sz_A_r+1:sz_C_r,sz_A_c:sz_C_c) = B_tmp;
-                    
-                    % Determine Non-Zero Rows at Edge Connection for Each Matrix
-                    % This limits the search space as these are the only possible vertices to remove
-                    % One vertice must be removed from A and one vertice must be removed from B 
-                    nz_v_a = find(A_tmp(:,sz_A_c)); % Number of Non-Zero Vertices at Edge Connection in Matrix A
-                    nz_v_b = find(B_tmp(:,1)); % Number of Non-Zero Vertices at Edge Connection in Matrix B
-            
-                    % Search Non-Zero Vertices at Edge Connection in Matrix A
-                    for i = 1:length(nz_v_a)
-                        % Search Non-Zero Vertices at Edge Connection in Matrix B
-                        for j = 1:length(nz_v_b)
-                            % Compute rows to remove 
-                            va_r = nz_v_a(i); 
-                            vb_r = nz_v_b(j) + sz_A_r; % Offset based on matrix A position 
-                            % Assign temporary matrix 
-                            C_tmp = D;
-                            % Remove rows 
-                            % C_tmp([va_r, vb_r],:) = [];
-                            % Compute Laplacian 
-                            Lap_tmp = C_tmp*C_tmp';
-                            % Compute Laplacian Eigenvalues
-                            Lap_eig_tmp = eig(Lap_tmp,"nobalance");
-                            % Compute Zero Eigenvalue Multiplicity 
-                            zero_eig_mult = sum(find(Lap_eig_tmp < eps('single')));
-                            % If a connected graph store the pairs 
-                            % if all([zero_eig_mult == 1, sum(sum(Lap_tmp, 1)) == 0, sum(sum(Lap_tmp,2)) == 0])
-                                [G, Nv, Ne] = gmtbGraph(C_tmp);
-                                valid_ec(idx,:) = [size(C_tmp,1), size(C_tmp,2), Nv, Ne, det(C_tmp*C_tmp'), zero_eig_mult, size(C_tmp*C_tmp',2)-rank(C_tmp*C_tmp'), k, l, va_r, vb_r, sum(sum(C_tmp, 1)), sum(sum(C_tmp,2)), sum(sum(C_tmp*C_tmp',1)), sum(sum(C_tmp*C_tmp',2)), max(sum(C_tmp*C_tmp',1)), max(sum(C_tmp*C_tmp',2)), min(sum(C_tmp*C_tmp',1)), min(sum(C_tmp*C_tmp',2)),Lap_eig_tmp'];
-                                figure('Visible', 'off');
-                                plot(G,'Layout','force')
-                                fileName = strcat('GraphCombination_',string(datetime('today', 'Format', 'MMddyyyy')),'_Test_Num_',num2str(idx),'.png');
-                                saveas(gcf,fileName)
-                                close all
-                                idx = idx + 1;
-                            % end
-                        end
-                    end
-                end
-            end
-        end
-    end
+    % methods (Static)
+    % 
+    %     function objC = gmt_Combine(CompM_Edge,EdgeC,CompM_Vertex,VertexC)
+    %         % Joe Pisani 12/19/2025 GraphTools uses concept of Ports which are user defined model connection points 
+    %         % The algorithm C. Aksland uses requires specification of common vertices and edges together. 
+    %         % Recommend using graph theory to combine graphs, but laplacians are not unique they can only tell us if the combined graph is correct or not. ... 
+    %         % They are not invertible, meaning they are linear dependent, meaning there are multiplie solutions. 
+    %         % More details on GraphTools algorithm, an incidence matrix is computed based on head and tail state defintions. 
+    %         % Chris tells use we must specify the vertex pair to be removed when an edge is removed 
+    %         % Do we want to use the port concept or be more generic? 
+    % 
+    %         % Need to update internal and external vertex and edge definition areas 
+    % 
+    %         % CompM is dimension {:,2}, meaning two components 
+    %         CompM_Edge_len = size(CompM_Edge,1);
+    %         CompM_Edge_width = size(CompM_Edge,2);
+    %         EdgeC_len = size(EdgeC,1);
+    % 
+    %         CompM_Vertex_len = size(CompM_Vertex,1);
+    %         CompM_Vertex_width = size(CompM_Vertex,1);
+    %         VertexC_len = size(VertexC,1);
+    % 
+    %         if all([~isempty(CompM_Edge),~isempty(EdgeC),CompM_Edge_width == 2,CompM_Edge_len==EdgeC_len])
+    %             % Valid Edge Connection 
+    %             % Verify Class Types
+    %             for i = 1:CompM_Edge_len
+    %                 for j = 1:2
+    %                     if isa(CompM_Edge(i,j),"gmt_Graph")
+    %                         error("Not all components being combined are of class gmt_Graph")
+    %                         break;
+    %                     end   
+    %                 end
+    %             end
+    % 
+    %         elseif all([~isempty(CompM_Vertex),~isempty(VertexC),CompM_Vertex_width == 2,CompM_Vertex_len==VertexC_len])
+    %             % Valid Vertex Connection 
+    %             % Verify Class Types
+    %             for i = 1:CompM_Vertex_len
+    %                 for j = 1:2
+    %                     if isa(CompM_Vertex(i,j),"gmt_Graph")
+    %                         error("Not all components being combined are of class gmt_Graph")
+    %                         break;
+    %                     end
+    % 
+    %                 end
+    %             end
+    %         end
+    % 
+    % 
+    %         % Verify The Inputs Are gmt_Graph
+    % 
+    %         % Compute Each Matrix Sizes  
+    %         A = CompM_Edge(i,1).Properties.M;
+    %         B = CompM_Edge(j,1).Properties.M;
+    % 
+    %         sz_A_r = size(A,1);
+    %         sz_A_c = size(A,2);
+    %         sz_B_r = size(B,1);
+    %         sz_B_c = size(B,2);
+    %         sz_C_r = sz_A_r + sz_B_r;
+    %         sz_C_c = sz_A_c + sz_B_c - 1;
+    % 
+    %         % Create New Matrix of Zeros 
+    %         C = zeros(sz_C_r,sz_C_c);
+    % 
+    %         idx = 1;
+    % 
+    %         close all
+    %         % Search Each Edge Combination in A and B 
+    %         for k = 1:sz_A_c
+    %             for l = 1:sz_B_c
+    % 
+    %                 % Creat Combination Vector
+    %                 cm_c = [k, l];
+    % 
+    %                 % Rearrange Columns of A
+    %                 A_c_tmp = 1:1:sz_A_c;
+    %                 A_c_tmp(:,cm_c(1)) = [];
+    %                 A_tmp = [A(:,A_c_tmp),A(:,cm_c(1))];
+    %                 % 
+    %                 % [G, Nv, Ne] = gmtbGraph(A_tmp);
+    %                 % figure
+    %                 % plot(G,'Layout','force')
+    %                 % 
+    %                 % Rearrange Columns of B
+    %                 B_c_tmp = 1:1:sz_B_c;
+    %                 B_c_tmp(:,cm_c(2)) = [];
+    %                 B_tmp = [B(:,cm_c(2)), B(:,B_c_tmp)];
+    % 
+    %                 % [G, Nv, Ne] = gmtbGraph(B_tmp);
+    %                 % figure
+    %                 % plot(G,'Layout','force')
+    % 
+    %                 D(1:sz_A_r,1:sz_A_c) = A_tmp;
+    %                 D(sz_A_r+1:sz_C_r,sz_A_c:sz_C_c) = B_tmp;
+    % 
+    %                 % Determine Non-Zero Rows at Edge Connection for Each Matrix
+    %                 % This limits the search space as these are the only possible vertices to remove
+    %                 % One vertice must be removed from A and one vertice must be removed from B 
+    %                 nz_v_a = find(A_tmp(:,sz_A_c)); % Number of Non-Zero Vertices at Edge Connection in Matrix A
+    %                 nz_v_b = find(B_tmp(:,1)); % Number of Non-Zero Vertices at Edge Connection in Matrix B
+    % 
+    %                 % Search Non-Zero Vertices at Edge Connection in Matrix A
+    %                 for i = 1:length(nz_v_a)
+    %                     % Search Non-Zero Vertices at Edge Connection in Matrix B
+    %                     for j = 1:length(nz_v_b)
+    %                         % Compute rows to remove 
+    %                         va_r = nz_v_a(i); 
+    %                         vb_r = nz_v_b(j) + sz_A_r; % Offset based on matrix A position 
+    %                         % Assign temporary matrix 
+    %                         C_tmp = D;
+    %                         % Remove rows 
+    %                         % C_tmp([va_r, vb_r],:) = [];
+    %                         % Compute Laplacian 
+    %                         Lap_tmp = C_tmp*C_tmp';
+    %                         % Compute Laplacian Eigenvalues
+    %                         Lap_eig_tmp = eig(Lap_tmp,"nobalance");
+    %                         % Compute Zero Eigenvalue Multiplicity 
+    %                         zero_eig_mult = sum(find(Lap_eig_tmp < eps('single')));
+    %                         % If a connected graph store the pairs 
+    %                         % if all([zero_eig_mult == 1, sum(sum(Lap_tmp, 1)) == 0, sum(sum(Lap_tmp,2)) == 0])
+    %                             [G, Nv, Ne] = gmtbGraph(C_tmp);
+    %                             valid_ec(idx,:) = [size(C_tmp,1), size(C_tmp,2), Nv, Ne, det(C_tmp*C_tmp'), zero_eig_mult, size(C_tmp*C_tmp',2)-rank(C_tmp*C_tmp'), k, l, va_r, vb_r, sum(sum(C_tmp, 1)), sum(sum(C_tmp,2)), sum(sum(C_tmp*C_tmp',1)), sum(sum(C_tmp*C_tmp',2)), max(sum(C_tmp*C_tmp',1)), max(sum(C_tmp*C_tmp',2)), min(sum(C_tmp*C_tmp',1)), min(sum(C_tmp*C_tmp',2)),Lap_eig_tmp'];
+    %                             figure('Visible', 'off');
+    %                             plot(G,'Layout','force')
+    %                             fileName = strcat('GraphCombination_',string(datetime('today', 'Format', 'MMddyyyy')),'_Test_Num_',num2str(idx),'.png');
+    %                             saveas(gcf,fileName)
+    %                             close all
+    %                             idx = idx + 1;
+    %                         % end
+    %                     end
+    %                 end
+    %             end
+    %         end
+    %     end
+    % end
 end

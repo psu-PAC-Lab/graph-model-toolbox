@@ -1,0 +1,683 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>gmt_Vertex</title>
+<meta name="generator" content="MATLAB 25.1">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-01-13">
+<meta name="DC.source" content="gmt_Vertex.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">gmt_GraphVertex</a>
+</li>
+<li>
+<a href="#2">Constructor Method (User Defined and Internal Meta Data Update)</a>
+</li>
+<li>
+<a href="#3">External MetaData Methods</a>
+</li>
+</ul>
+</div>
+<h2 id="1">gmt_GraphVertex</h2>
+<p>Class used to define vertex properties in graph model Note CapacitanceEq syntax Multi-states and multi-control inputs syntax must be defined starting with the variable name "x" or "u" followed by the number "x1" "x2" etc. Single state or single control inputs must be defined only by the variable name "x" or "u"</p>
+<pre class="codeinput">
+<span class="keyword">classdef</span> gmt_Vertex
+
+    <span class="keyword">properties</span>
+        <span class="comment">% User Defined Meta Data</span>
+        VertexName <span class="typesection">string </span><span class="comment">% User specified name to define an vertex object</span>
+        CapacitanceEq <span class="typesection">string </span><span class="comment">% User specified name formula defining the vertex capacitance equation</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">properties</span> (SetAccess = protected)
+        <span class="comment">%  Internal Meta Data - Auto-Generated based vertex object, runs during constructor method i.e. only an vertex object must be defined to define these variables</span>
+        StateType <span class="typesection">string </span><span class="comment">% Internally specified state type based on user define capitance equation formulation</span>
+        VertexType <span class="typesection">string </span>= gmt_VertexType.Internal <span class="comment">% Internally specified vertex type assigned during graph model generation</span>
+        NvSa <span class="typesection">(1,1) double </span><span class="comment">% Number of independent algebraic states within vertex</span>
+        NvSd <span class="typesection">(1,1) double </span><span class="comment">% Number of independent dynamic state within vertex</span>
+        NvS <span class="typesection">(1,1) double </span><span class="comment">% Total number of independent states within vertex</span>
+        NvU <span class="typesection">(1,1) double </span><span class="comment">% Number of control inputs within vertex</span>
+        NvY <span class="typesection">(1,1) double </span><span class="comment">% Number of outputs within vertex</span>
+        Capacitance <span class="typesection">string </span>= []<span class="comment">% Internally computed capacitance based on user defined capacitance equation</span>
+        StateVariables <span class="typesection">string </span>= [] <span class="comment">% List of algebraic and dynamic state variables defiend in capacitance equation</span>
+        StateDerVariables <span class="typesection">string </span>= [] <span class="comment">% List of dynamic state variables defined in capacitance equation</span>
+        InputVariables <span class="typesection">string </span>= [] <span class="comment">% List of input variables defined in capacitance equation</span>
+        OutputVariables <span class="typesection">string </span>= [] <span class="comment">% List of output variables defined in capacitance equation</span>
+        ParameterVariables <span class="typesection">string </span>= [] <span class="comment">% List of parameter variables defined in capacitance equation</span>
+        <span class="comment">% External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables</span>
+        GraphStateVariables <span class="typesection">string </span>= [] <span class="comment">% Auto-generated list of state variables based on graph model</span>
+        GraphStateDerVariables <span class="typesection">string </span>= [] <span class="comment">% Auto-generated list of state derivative variables based on graph model</span>
+        GraphOutputVariables <span class="typesection">string </span>= [] <span class="comment">% Auto-generated list of output variables based on graph model</span>
+        GraphCapacitanceEq <span class="typesection">string </span>= [] <span class="comment">% Auto-generated graph specific capacitance equation</span>
+        GraphCapacitance <span class="typesection">string </span>= [] <span class="comment">% Auto-generated graph specific capacitance equation</span>
+        GraphPowerEq <span class="typesection">string </span><span class="comment">% Auto-generated graph specific power equation</span>
+        GraphVertexEq <span class="typesection">string </span><span class="comment">% Auto-generated graph specific vertex equation</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">methods</span>
+</pre>
+<h2 id="2">Constructor Method (User Defined and Internal Meta Data Update)</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_Vertex(VertexName,CapacitanceEquation,varargin)
+
+            <span class="comment">% Generates instance of gmt_GraphVertex object</span>
+            Name_data_valid = isa(VertexName,<span class="string">'string'</span>);
+            CapacitanceEquation_data_valid = isa(CapacitanceEquation,<span class="string">'string'</span>);
+
+            <span class="comment">% Determine if name input is empty</span>
+            <span class="keyword">if</span> Name_data_valid
+                Name_blank = logical(strlength(VertexName)==0);
+                <span class="keyword">if</span> Name_blank
+                    error(<span class="string">"Name field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Name field data type is not a string"</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Determine if CapacitanceEquation input is empty</span>
+            <span class="keyword">if</span> CapacitanceEquation_data_valid
+                CapacitanceEquation_blank = logical(strlength(CapacitanceEquation)==0);
+                <span class="keyword">if</span> CapacitanceEquation_blank
+                    error(<span class="string">"Capacitance Equation field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Capacitance Equation field data type is not a string"</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Update Object Properties</span>
+            obj.VertexName = VertexName; <span class="comment">% Assigns input variable Name to VertexName property</span>
+            obj.CapacitanceEq = CapacitanceEquation; <span class="comment">% Assigns input variable Equation to CapacitanceEq property</span>
+
+            <span class="comment">% Determines StateType using _dot phrase</span>
+            <span class="keyword">if</span> contains(CapacitanceEquation,<span class="string">"_dot"</span>) == true
+                obj.StateType = gmt_StateType.Dynamic;
+            <span class="keyword">else</span>
+                obj.StateType = gmt_StateType.Algebraic;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Determine if user has specified external edge type</span>
+            numInputs = length(varargin); <span class="comment">% Compute number of variable length input arguments</span>
+
+            <span class="comment">% Check variable length input argument if one is assigned</span>
+            <span class="keyword">if</span> numInputs == 1
+                <span class="keyword">if</span> strcmpi(varargin{1},gmt_VertexType.External) <span class="comment">% Case-insensitive string compare</span>
+                    obj.VertexType = gmt_VertexType.External; <span class="comment">% Assign vertex type to available enumeration</span>
+                <span class="keyword">else</span> <span class="comment">% Return error is variable input argument does not match upper or lower class spelling</span>
+                    error(<span class="string">"Check spelling, user specified vertex type other than 'External'. Users only need to define external vertex types, internal edge type is default assumption."</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">elseif</span> numInputs &gt; 1 <span class="comment">% More than one variable return error</span>
+                error(<span class="string">"More than one variable length input argument has been assigned. Object only accepts one variable input argument for external vertex types."</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Capacitance Equation Parsing</span>
+            <span class="comment">% Number of State Variables</span>
+            <span class="comment">% Number of States</span>
+            <span class="comment">% Number of Control Inputs</span>
+            <span class="comment">% Number of Neural Networks</span>
+            <span class="comment">% Number of 1D lookup functions</span>
+            <span class="comment">% Number of 2D lookup functions</span>
+            <span class="comment">% Number of 3D lookup functions</span>
+
+            <span class="comment">% Number of States within Capacitance Equation</span>
+            <span class="comment">% Currently can only handle single digit numbers and does not check if the number sequencing is correct.</span>
+            <span class="comment">% There can be one state or multiple states defined in equation</span>
+
+            <span class="comment">% Split String By Mathematical Operators and Parentheses</span>
+            CapacitanceEq_var_tmp = split(obj.CapacitanceEq,[gmt_Symbols().Symbols,<span class="string">"("</span>,<span class="string">")"</span>,<span class="string">"^"</span>]);
+
+            <span class="comment">% State Derivative Number Determination</span>
+            pattern_regex = <span class="string">'^x\d+_dot$|^x_dot$'</span>;
+
+            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(match_tmp)
+                match_tmp = ~cellfun(<span class="string">'isempty'</span>,match_tmp);
+            <span class="keyword">elseif</span> isempty(match_tmp)
+                match_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Compute number of states derivatives and store variables into list</span>
+
+            <span class="keyword">if</span> any(match_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                match_idx = find(match_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamxd_tmp = CapacitanceEq_var_tmp(match_idx); <span class="comment">% Return matching variables</span>
+                varnumxd_tmp = extractBefore(extractAfter(varnamxd_tmp,<span class="string">"x"</span>),<span class="string">"_dot"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstremptyd = strlength(varnumxd_tmp) == 0;
+
+                <span class="keyword">if</span> exist(<span class="string">'isstrempty'</span>,<span class="string">'var'</span>)
+                    assert(any(isstremptyd)==any(isstrempty),<span class="string">"State variable syntax does not match state derivative syntax. There is mismatch between number state variables and numbering state derivative variables."</span>)
+                <span class="keyword">end</span>
+
+                <span class="keyword">if</span> all(isstremptyd)
+                    NvSd_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstremptyd),<span class="string">"Capacitance equation combines single state derivative vertex syntax 'x_dot' and multi-state vertex syntax 'x1_dot, x2_dot, x3_dot ...', review capacitance equation."</span>)
+                    varnumxd_tmp = unique(sort(str2double(varnumxd_tmp)));
+                    isx_consecutive = all(diff(varnumxd_tmp) == 1);
+                    assert(isx_consecutive,<span class="string">"State derivative variables indexing is not monotically increasing"</span>)
+                    isx_strt_one = min(varnumxd_tmp) == 1;
+                    assert(isx_strt_one,<span class="string">"State derivative variable indexing does not start from one."</span>)
+                    NvSd_tmp = max(varnumxd_tmp);
+                <span class="keyword">end</span>
+                obj.StateDerVariables = unique(varnamxd_tmp');
+            <span class="keyword">else</span>
+                NvSd_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NvSd = NvSd_tmp;
+
+            <span class="comment">% Compute number of states and store variables into list</span>
+
+            <span class="comment">% State Number Determination</span>
+            pattern_regex = <span class="string">'^[x]\d$|^[x]$'</span>;
+
+            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(match_tmp)
+                match_tmp = ~cellfun(<span class="string">'isempty'</span>,match_tmp);
+            <span class="keyword">elseif</span> isempty(match_tmp)
+                match_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="keyword">if</span> any(match_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                match_idx = find(match_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamx_tmp = CapacitanceEq_var_tmp(match_idx); <span class="comment">% Return matching variables</span>
+                varnumx_tmp = extractAfter(varnamx_tmp,<span class="string">"x"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstrempty = strlength(varnumx_tmp) == 0;
+                <span class="keyword">if</span> all(isstrempty)
+                    NvS_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstrempty),<span class="string">"Capacitance equation combines single state vertex syntax 'x' and multi-state vertex syntax 'x1, x2, x3 ...', review capacitance equation."</span>)
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    isx_consecutive = all(diff(varnumx_tmp) == 1);
+                    assert(isx_consecutive,<span class="string">"State variables indexing is not monotically increasing"</span>)
+                    isx_strt_one = min(varnumx_tmp) == 1;
+                    assert(isx_strt_one,<span class="string">"State variable indexing does not start from one."</span>)
+                    NvS_tmp = max(varnumx_tmp);
+                <span class="keyword">end</span>
+                obj.StateVariables = unique(varnamx_tmp');
+            <span class="keyword">else</span>
+                NvS_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NvSa = NvS_tmp;
+
+            <span class="comment">% Add Dynamic State Variables to State Variables</span>
+            <span class="comment">% Compute Total Number of States</span>
+            <span class="keyword">if</span> ~isempty(obj.StateDerVariables)
+                StateVar_tmp = unique([obj.StateVariables, extractBefore(obj.StateDerVariables,<span class="string">"_dot"</span>)']);
+                obj.StateVariables = StateVar_tmp;
+                obj.NvS = length(StateVar_tmp);
+            <span class="keyword">end</span>
+
+            <span class="comment">% Control Input Number Determination</span>
+            pattern_regexu = <span class="string">'^[u]\d|^[u]$'</span>;
+
+            matchu_tmp = regexp(CapacitanceEq_var_tmp, pattern_regexu);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(matchu_tmp)
+                matchu_tmp = ~cellfun(<span class="string">'isempty'</span>,matchu_tmp);
+            <span class="keyword">elseif</span> isempty(matchu_tmp)
+                matchu_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Compute number of control inputs and store variables into list</span>
+
+            <span class="keyword">if</span> any(matchu_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                matchu_idx = find(matchu_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamu_tmp = CapacitanceEq_var_tmp(matchu_idx); <span class="comment">% Return matching variables</span>
+                varnumu_tmp = extractAfter(varnamu_tmp,<span class="string">"u"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstrempty = strlength(varnumu_tmp) == 0;
+                <span class="keyword">if</span> all(isstrempty)
+                    NvU_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstrempty),<span class="string">"Capacitance equation combines single control input syntax 'u' and multi-control input syntax 'u1, u2, u3 ...', review capacitance equation."</span>)
+                    varnumu_tmp = unique(sort(str2double(varnumu_tmp)));
+                    NvU_tmp = length(varnumu_tmp);
+                <span class="keyword">end</span>
+                obj.InputVariables = unique(varnamu_tmp');
+            <span class="keyword">else</span>
+                NvU_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NvU = NvU_tmp;
+
+
+            <span class="comment">% Compute number of outputs</span>
+            <span class="keyword">if</span> obj.StateType == gmt_StateType.Algebraic
+                <span class="comment">% If the state is algebraic then it is an output</span>
+                NvY_tmp = 1;
+                obj.OutputVariables = <span class="string">"y"</span>;
+            <span class="keyword">else</span>
+                <span class="comment">% Else the state is dynamic than it is not an output</span>
+                NvY_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NvY = NvY_tmp;
+
+
+            <span class="comment">% Vertex Capacitance</span>
+            Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
+            <span class="comment">% Create regular expression pattern to remove strings ending in math operator</span>
+            pattern = <span class="string">"("</span> + strjoin(gmt_Symbols().Symbols, <span class="string">"|"</span>) + <span class="string">")$"</span>;
+            <span class="comment">% Run regular expression and remove operator if present at end of string</span>
+            match_tmp = regexprep(Capacitance_tmp, pattern, <span class="string">""</span>);
+            <span class="keyword">if</span> strlength(match_tmp) == 0
+                obj.Capacitance = <span class="string">"1"</span>;
+            <span class="keyword">else</span>
+                obj.Capacitance = match_tmp;
+
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+</pre>
+<h2 id="3">External MetaData Methods</h2>
+<pre class="codeinput">        <span class="comment">% Updates graph specific information</span>
+        <span class="keyword">function</span> obj = gmt_GraphVertexUpdate(obj,Ds_var_tmp, As_var_tmp, y_var_tmp)
+
+            <span class="comment">% Assign Graph Specifics to Vertex</span>
+            obj.GraphStateDerVariables = Ds_var_tmp;
+            obj.GraphStateVariables = As_var_tmp;
+            obj.GraphOutputVariables = y_var_tmp;
+
+            <span class="comment">% Create Old and New List for Replacement</span>
+            genVars = [obj.StateVariables,obj.StateDerVariables];
+            graphVars = [obj.GraphStateVariables,obj.GraphStateDerVariables];
+
+            <span class="comment">% Update Graph Specific Equations</span>
+            obj.GraphCapacitanceEq = replace(obj.CapacitanceEq, genVars, graphVars);
+            obj.GraphCapacitance = replace(obj.Capacitance, genVars, graphVars);
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Updates Power Equations</span>
+        <span class="keyword">function</span> obj = gmt_GraphVertexEqUpdate(obj,final_tmp)
+            <span class="comment">% Updates vertex power flow based on edge matrix analysis, and edge equations</span>
+            obj.GraphPowerEq = <span class="string">"("</span> + final_tmp + <span class="string">")"</span>;
+            obj.GraphVertexEq = <span class="string">"(1/("</span> + obj.GraphCapacitance + <span class="string">"))*"</span> + obj.GraphPowerEq;
+        <span class="keyword">end</span>
+</pre>
+<pre class="codeinput">    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025a</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% gmt_GraphVertex
+% Class used to define vertex properties in graph model
+% Note CapacitanceEq syntax 
+% Multi-states and multi-control inputs syntax must be defined starting 
+% with the variable name "x" or "u" followed by the number "x1" "x2" etc. 
+% Single state or single control inputs must be defined only by the variable
+% name "x" or "u"
+
+classdef gmt_Vertex
+    
+    properties
+        % User Defined Meta Data
+        VertexName string % User specified name to define an vertex object
+        CapacitanceEq string % User specified name formula defining the vertex capacitance equation
+    end
+
+    properties (SetAccess = protected)
+        %  Internal Meta Data - Auto-Generated based vertex object, runs during constructor method i.e. only an vertex object must be defined to define these variables 
+        StateType string % Internally specified state type based on user define capitance equation formulation
+        VertexType string = gmt_VertexType.Internal % Internally specified vertex type assigned during graph model generation
+        NvSa (1,1) double % Number of independent algebraic states within vertex  
+        NvSd (1,1) double % Number of independent dynamic state within vertex 
+        NvS (1,1) double % Total number of independent states within vertex 
+        NvU (1,1) double % Number of control inputs within vertex
+        NvY (1,1) double % Number of outputs within vertex
+        Capacitance string = []% Internally computed capacitance based on user defined capacitance equation
+        StateVariables string = [] % List of algebraic and dynamic state variables defiend in capacitance equation 
+        StateDerVariables string = [] % List of dynamic state variables defined in capacitance equation 
+        InputVariables string = [] % List of input variables defined in capacitance equation
+        OutputVariables string = [] % List of output variables defined in capacitance equation 
+        ParameterVariables string = [] % List of parameter variables defined in capacitance equation 
+        % External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables  
+        GraphStateVariables string = [] % Auto-generated list of state variables based on graph model
+        GraphStateDerVariables string = [] % Auto-generated list of state derivative variables based on graph model
+        GraphOutputVariables string = [] % Auto-generated list of output variables based on graph model
+        GraphCapacitanceEq string = [] % Auto-generated graph specific capacitance equation 
+        GraphCapacitance string = [] % Auto-generated graph specific capacitance equation 
+        GraphPowerEq string % Auto-generated graph specific power equation 
+        GraphVertexEq string % Auto-generated graph specific vertex equation 
+    end
+
+    methods
+    
+        %% Constructor Method (User Defined and Internal Meta Data Update) 
+        function obj = gmt_Vertex(VertexName,CapacitanceEquation,varargin)
+
+            % Generates instance of gmt_GraphVertex object
+            Name_data_valid = isa(VertexName,'string');
+            CapacitanceEquation_data_valid = isa(CapacitanceEquation,'string');
+    
+            % Determine if name input is empty
+            if Name_data_valid
+                Name_blank = logical(strlength(VertexName)==0);
+                if Name_blank 
+                    error("Name field is empty")
+                end
+            else
+                error("Name field data type is not a string")
+            end
+    
+            % Determine if CapacitanceEquation input is empty
+            if CapacitanceEquation_data_valid
+                CapacitanceEquation_blank = logical(strlength(CapacitanceEquation)==0);
+                if CapacitanceEquation_blank
+                    error("Capacitance Equation field is empty")
+                end
+            else 
+                error("Capacitance Equation field data type is not a string")
+            end
+    
+            % Update Object Properties 
+            obj.VertexName = VertexName; % Assigns input variable Name to VertexName property 
+            obj.CapacitanceEq = CapacitanceEquation; % Assigns input variable Equation to CapacitanceEq property 
+
+            % Determines StateType using _dot phrase 
+            if contains(CapacitanceEquation,"_dot") == true
+                obj.StateType = gmt_StateType.Dynamic;
+            else
+                obj.StateType = gmt_StateType.Algebraic;
+            end
+
+            % Determine if user has specified external edge type
+            numInputs = length(varargin); % Compute number of variable length input arguments 
+
+            % Check variable length input argument if one is assigned 
+            if numInputs == 1 
+                if strcmpi(varargin{1},gmt_VertexType.External) % Case-insensitive string compare
+                    obj.VertexType = gmt_VertexType.External; % Assign vertex type to available enumeration 
+                else % Return error is variable input argument does not match upper or lower class spelling
+                    error("Check spelling, user specified vertex type other than 'External'. Users only need to define external vertex types, internal edge type is default assumption.")
+                end
+            elseif numInputs > 1 % More than one variable return error 
+                error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external vertex types.")
+            end
+
+            % Capacitance Equation Parsing
+            % Number of State Variables 
+            % Number of States 
+            % Number of Control Inputs
+            % Number of Neural Networks 
+            % Number of 1D lookup functions
+            % Number of 2D lookup functions
+            % Number of 3D lookup functions
+
+            % Number of States within Capacitance Equation
+            % Currently can only handle single digit numbers and does not check if the number sequencing is correct.
+            % There can be one state or multiple states defined in equation
+
+            % Split String By Mathematical Operators and Parentheses
+            CapacitanceEq_var_tmp = split(obj.CapacitanceEq,[gmt_Symbols().Symbols,"(",")","^"]);
+
+            % State Derivative Number Determination 
+            pattern_regex = '^x\d+_dot$|^x_dot$';
+
+            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
+
+            % Convert From Cell to Array
+            if iscell(match_tmp)
+                match_tmp = ~cellfun('isempty',match_tmp);
+            elseif isempty(match_tmp)
+                match_tmp = false;
+            end
+
+            % Compute number of states derivatives and store variables into list  
+
+            if any(match_tmp) % There is atleast one matching variable found 
+                match_idx = find(match_tmp); % Find the indices for matching variable 
+                varnamxd_tmp = CapacitanceEq_var_tmp(match_idx); % Return matching variables 
+                varnumxd_tmp = extractBefore(extractAfter(varnamxd_tmp,"x"),"_dot"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstremptyd = strlength(varnumxd_tmp) == 0;
+
+                if exist('isstrempty','var')
+                    assert(any(isstremptyd)==any(isstrempty),"State variable syntax does not match state derivative syntax. There is mismatch between number state variables and numbering state derivative variables.")
+                end
+                
+                if all(isstremptyd) 
+                    NvSd_tmp = 1;
+                else 
+                    assert(~any(isstremptyd),"Capacitance equation combines single state derivative vertex syntax 'x_dot' and multi-state vertex syntax 'x1_dot, x2_dot, x3_dot ...', review capacitance equation.")
+                    varnumxd_tmp = unique(sort(str2double(varnumxd_tmp)));
+                    isx_consecutive = all(diff(varnumxd_tmp) == 1);
+                    assert(isx_consecutive,"State derivative variables indexing is not monotically increasing")
+                    isx_strt_one = min(varnumxd_tmp) == 1;
+                    assert(isx_strt_one,"State derivative variable indexing does not start from one.")
+                    NvSd_tmp = max(varnumxd_tmp);
+                end
+                obj.StateDerVariables = unique(varnamxd_tmp');
+            else
+                NvSd_tmp = 0;
+            end
+
+            obj.NvSd = NvSd_tmp;
+
+            % Compute number of states and store variables into list  
+
+            % State Number Determination 
+            pattern_regex = '^[x]\d$|^[x]$';
+
+            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
+
+            % Convert From Cell to Array
+            if iscell(match_tmp)
+                match_tmp = ~cellfun('isempty',match_tmp);
+            elseif isempty(match_tmp)
+                match_tmp = false;
+            end
+
+            if any(match_tmp) % There is atleast one matching variable found 
+                match_idx = find(match_tmp); % Find the indices for matching variable 
+                varnamx_tmp = CapacitanceEq_var_tmp(match_idx); % Return matching variables 
+                varnumx_tmp = extractAfter(varnamx_tmp,"x"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstrempty = strlength(varnumx_tmp) == 0;
+                if all(isstrempty) 
+                    NvS_tmp = 1;
+                else 
+                    assert(~any(isstrempty),"Capacitance equation combines single state vertex syntax 'x' and multi-state vertex syntax 'x1, x2, x3 ...', review capacitance equation.")
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    isx_consecutive = all(diff(varnumx_tmp) == 1);
+                    assert(isx_consecutive,"State variables indexing is not monotically increasing")
+                    isx_strt_one = min(varnumx_tmp) == 1;
+                    assert(isx_strt_one,"State variable indexing does not start from one.")
+                    NvS_tmp = max(varnumx_tmp);
+                end
+                obj.StateVariables = unique(varnamx_tmp');
+            else
+                NvS_tmp = 0;
+            end
+
+            obj.NvSa = NvS_tmp;
+
+            % Add Dynamic State Variables to State Variables 
+            % Compute Total Number of States
+            if ~isempty(obj.StateDerVariables)
+                StateVar_tmp = unique([obj.StateVariables, extractBefore(obj.StateDerVariables,"_dot")']);
+                obj.StateVariables = StateVar_tmp;
+                obj.NvS = length(StateVar_tmp);
+            end
+
+            % Control Input Number Determination 
+            pattern_regexu = '^[u]\d|^[u]$';
+
+            matchu_tmp = regexp(CapacitanceEq_var_tmp, pattern_regexu);
+
+            % Convert From Cell to Array
+            if iscell(matchu_tmp)
+                matchu_tmp = ~cellfun('isempty',matchu_tmp);
+            elseif isempty(matchu_tmp)
+                matchu_tmp = false;
+            end
+
+            % Compute number of control inputs and store variables into list 
+            
+            if any(matchu_tmp) % There is atleast one matching variable found 
+                matchu_idx = find(matchu_tmp); % Find the indices for matching variable 
+                varnamu_tmp = CapacitanceEq_var_tmp(matchu_idx); % Return matching variables 
+                varnumu_tmp = extractAfter(varnamu_tmp,"u"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstrempty = strlength(varnumu_tmp) == 0;
+                if all(isstrempty) 
+                    NvU_tmp = 1;
+                else 
+                    assert(~any(isstrempty),"Capacitance equation combines single control input syntax 'u' and multi-control input syntax 'u1, u2, u3 ...', review capacitance equation.")
+                    varnumu_tmp = unique(sort(str2double(varnumu_tmp)));
+                    NvU_tmp = length(varnumu_tmp);
+                end
+                obj.InputVariables = unique(varnamu_tmp');
+            else
+                NvU_tmp = 0;
+            end
+
+            obj.NvU = NvU_tmp;
+
+
+            % Compute number of outputs 
+            if obj.StateType == gmt_StateType.Algebraic
+                % If the state is algebraic then it is an output 
+                NvY_tmp = 1;
+                obj.OutputVariables = "y";
+            else 
+                % Else the state is dynamic than it is not an output 
+                NvY_tmp = 0;
+            end
+
+            obj.NvY = NvY_tmp;
+
+
+            % Vertex Capacitance 
+            Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
+            % Create regular expression pattern to remove strings ending in math operator
+            pattern = "(" + strjoin(gmt_Symbols().Symbols, "|") + ")$";
+            % Run regular expression and remove operator if present at end of string             
+            match_tmp = regexprep(Capacitance_tmp, pattern, "");    
+            if strlength(match_tmp) == 0
+                obj.Capacitance = "1";
+            else
+                obj.Capacitance = match_tmp;
+
+            end
+        end
+    
+        %% External MetaData Methods
+
+        % Updates graph specific information 
+        function obj = gmt_GraphVertexUpdate(obj,Ds_var_tmp, As_var_tmp, y_var_tmp)
+
+            % Assign Graph Specifics to Vertex 
+            obj.GraphStateDerVariables = Ds_var_tmp;
+            obj.GraphStateVariables = As_var_tmp;
+            obj.GraphOutputVariables = y_var_tmp;
+            
+            % Create Old and New List for Replacement 
+            genVars = [obj.StateVariables,obj.StateDerVariables];
+            graphVars = [obj.GraphStateVariables,obj.GraphStateDerVariables];
+
+            % Update Graph Specific Equations 
+            obj.GraphCapacitanceEq = replace(obj.CapacitanceEq, genVars, graphVars);
+            obj.GraphCapacitance = replace(obj.Capacitance, genVars, graphVars);
+
+        end
+
+        % Updates Power Equations
+        function obj = gmt_GraphVertexEqUpdate(obj,final_tmp)
+            % Updates vertex power flow based on edge matrix analysis, and edge equations
+            obj.GraphPowerEq = "(" + final_tmp + ")";
+            obj.GraphVertexEq = "(1/(" + obj.GraphCapacitance + "))*" + obj.GraphPowerEq;
+        end
+
+    end
+end
+
+
+##### SOURCE END #####
+-->
+</body>
+</html>

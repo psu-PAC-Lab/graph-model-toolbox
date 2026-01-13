@@ -1,0 +1,569 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>gmt_Edge</title>
+<meta name="generator" content="MATLAB 25.1">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-01-13">
+<meta name="DC.source" content="gmt_Edge.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">gmt_GraphEdge</a>
+</li>
+<li>
+<a href="#2">Constructor Method</a>
+</li>
+<li>
+<a href="#3">Graph Model Update</a>
+</li>
+<li>
+<a href="#4">Update Head Vertex Number</a>
+</li>
+<li>
+<a href="#5">Update Tail Vertex Number</a>
+</li>
+<li>
+<a href="#6">Update Graph Specific Head State Variables</a>
+</li>
+<li>
+<a href="#7">Update Graph Specific Tail State Variables</a>
+</li>
+</ul>
+</div>
+<h2 id="1">gmt_GraphEdge</h2>
+<p>Class used to define edge properties in graph model EdgeEq syntax State variables must be defined by a "head" or "tail" state denoted by "xh" or "xt" respectively Note Multi-states and Multi-Control Inputs Case Multi-states and multi-control inputs syntax must be defined starting with the variable name "xt", "xh" or "u" followed by the number "xh1" "xh2" etc, the numbering of multi-variables starts from 1 and ends at max number of multi-variables. Below is a two head state variable example. Valid Example: "xh1 + xh2" Invalid Example: "xh1 + xh3" Syntax applies to both multi-state and multi-control inputs. Note Single State or Single Control Input Case State or control input variables must not have append numbers. Only the variable needs to be defined if it is applicable. Below is an example of a head state variable and control input. Valid Example: "xh + u" Invaid Example: "xh1 + u" or "xh + u1" Syntax applies to both single-state and single-control inputs. The number of state variables does not need to match the number of control inputs.</p>
+<pre class="codeinput">
+<span class="keyword">classdef</span> gmt_Edge
+
+<span class="keyword">properties</span>
+    <span class="comment">% User Defined Meta Data</span>
+    EdgeName <span class="typesection">string </span><span class="comment">% User specified name to define an edge object</span>
+    EdgeEq <span class="typesection">string </span><span class="comment">% User specified formula defining the edge equation</span>
+
+<span class="keyword">end</span>
+
+<span class="keyword">properties</span> (SetAccess = private)
+    <span class="comment">%  Internal Meta Data - Auto-Generated based edge object, runs during constructor method i.e. only an edge object must be defined to define these variables</span>
+    EdgeType <span class="typesection">string </span>= gmt_EdgeType.Internal <span class="comment">% All edges are assumed to be internal unless specified as external by user</span>
+    NeTS <span class="typesection">double </span><span class="comment">% Number of tail states in edge equation</span>
+    NeHS <span class="typesection">double </span><span class="comment">% Number of head states in edge equation</span>
+    <span class="comment">%NeS double % Number of states that are not head or tail state. Future development.</span>
+    NeU <span class="typesection">double </span><span class="comment">% Number of control inputs in edge equation</span>
+    HeadStateVariables <span class="typesection">string </span>= [] <span class="comment">% List of head state variables defined in edge equation</span>
+    TailStateVariables <span class="typesection">string </span>= [] <span class="comment">% List of tail state variables defined in edge quation</span>
+    InputVariables <span class="typesection">string </span>= [] <span class="comment">% List of input variables defined in edge equation</span>
+    ParameterVariables <span class="typesection">string </span>= [] <span class="comment">% List of parameter variables defined in edge equation</span>
+    <span class="comment">% External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables</span>
+    HeadVertexNum <span class="typesection">(1,1) </span>= <span class="string">"Unassigned"</span> <span class="comment">% Auto assigned graph head vertex number based on EdgeMatrix defintion</span>
+    TailVertexNum <span class="typesection">(1,1) </span>= <span class="string">"Unassigned"</span> <span class="comment">% Auto assigned graph tail vertex number based on EdgeMatrix defintion</span>
+    GraphHeadStateVariables <span class="typesection">string </span>= [] <span class="comment">% List of head state variables defined in edge equation</span>
+    GraphTailStateVariables <span class="typesection">string </span>= [] <span class="comment">% List of tail state variables defined in edge quation</span>
+    GraphEdgeEq <span class="typesection">string </span><span class="comment">% Auto generated graph equation based on graph model data (Vertices, and EdgeMatrix)</span>
+<span class="keyword">end</span>
+
+<span class="keyword">methods</span>
+</pre>
+<h2 id="2">Constructor Method</h2>
+<p>Generates instance of gmt_GraphEdge object</p>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_Edge(EdgeName,EdgeEq,varargin)
+            <span class="comment">% Verify edge name is a string</span>
+            Name_data_valid = isa(EdgeName,<span class="string">'string'</span>);
+            <span class="comment">% Verify edge equation is a string</span>
+            Equation_data_valid = isa(EdgeEq,<span class="string">'string'</span>);
+
+            <span class="comment">% Determine if edge name input is empty</span>
+            <span class="keyword">if</span> Name_data_valid
+                Name_blank = logical(strlength(EdgeName)==0);
+                <span class="keyword">if</span> Name_blank
+                    error(<span class="string">"Name field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Name field data type is not a string"</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Determine if edge equation input is empty</span>
+            <span class="keyword">if</span> Equation_data_valid
+                Equation_blank = logical(strlength(EdgeEq)==0);
+                <span class="keyword">if</span> Equation_blank
+                    error(<span class="string">"Equation field is empty"</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">else</span>
+                error(<span class="string">"Equation field data type is not a string"</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Assign input variable name to EdgeName property</span>
+            obj.EdgeName = EdgeName;
+
+            <span class="comment">% Assign input variable equation to EdgeEq property</span>
+            obj.EdgeEq = EdgeEq;
+
+            <span class="comment">% Determine if user has specified external edge type</span>
+            numInputs = length(varargin); <span class="comment">% Compute number of variable length input arguments</span>
+
+            <span class="comment">% Check variable length input argument if one is assigned</span>
+            <span class="keyword">if</span> numInputs == 1
+                <span class="keyword">if</span> strcmpi(varargin{1},gmt_EdgeType.External) <span class="comment">% Case-insensitive string compare</span>
+                    obj.EdgeType = gmt_EdgeType.External; <span class="comment">% Assign edge type to available enumeration</span>
+                <span class="keyword">else</span> <span class="comment">% Return error is variable input argument does not match upper or lower class spelling</span>
+                    error(<span class="string">"Check spelling, user specified edge type other than 'External'. Users only need to define external edge types, internal edge type is default assumption."</span>)
+                <span class="keyword">end</span>
+            <span class="keyword">elseif</span> numInputs &gt; 1 <span class="comment">% More than one variable return error</span>
+                error(<span class="string">"More than one variable length input argument has been assigned. Object only accepts one variable input argument for external edge types."</span>)
+            <span class="keyword">end</span>
+
+            <span class="comment">% Split String By Mathematical Operators and Parentheses</span>
+            capeq_var_tmp = split(obj.EdgeEq,[gmt_Symbols().Symbols,<span class="string">"("</span>,<span class="string">")"</span>,<span class="string">"^"</span>]);
+
+            <span class="comment">% Tail State Number Determination</span>
+            pattern_regex = <span class="string">'^xt\d|^xt$'</span>;
+            match_tmp = regexp(capeq_var_tmp, pattern_regex);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(match_tmp)
+                match_tmp = ~cellfun(<span class="string">'isempty'</span>,match_tmp);
+            <span class="keyword">elseif</span> isempty(match_tmp)
+                match_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Compute number of tail states and store variables into list</span>
+
+            <span class="keyword">if</span> any(match_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                match_idx = find(match_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamx_tmp = capeq_var_tmp(match_idx); <span class="comment">% Return matching variables</span>
+                varnumx_tmp = extractAfter(varnamx_tmp,<span class="string">"xt"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstrempty = strlength(varnumx_tmp) == 0;
+                <span class="keyword">if</span> all(isstrempty)
+                    NeTS_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstrempty),<span class="string">"Capacitance equation combines single state vertex syntax 'xt' and multi-state vertex syntax 'xt1, xt2, xt3 ...', review capacitance equation."</span>)
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    NeTS_tmp = length(varnumx_tmp);
+                <span class="keyword">end</span>
+                obj.TailStateVariables = unique(varnamx_tmp');
+            <span class="keyword">else</span>
+                NeTS_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NeTS = NeTS_tmp; <span class="comment">% Assign number of tail states</span>
+
+            <span class="comment">% Head State Number Determination</span>
+            pattern_regex = <span class="string">'^xh\d|^xh$'</span>;
+            match_tmp = regexp(capeq_var_tmp, pattern_regex);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(match_tmp)
+                match_tmp = ~cellfun(<span class="string">'isempty'</span>,match_tmp);
+            <span class="keyword">elseif</span> isempty(match_tmp)
+                match_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Compute number of head states and store variables into list</span>
+
+            <span class="keyword">if</span> any(match_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                match_idx = find(match_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamx_tmp = capeq_var_tmp(match_idx); <span class="comment">% Return matching variables</span>
+                varnumx_tmp = extractAfter(varnamx_tmp,<span class="string">"xh"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstrempty = strlength(varnumx_tmp) == 0;
+                <span class="keyword">if</span> all(isstrempty)
+                    NeHS_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstrempty),<span class="string">"Capacitance equation combines single state vertex syntax 'xh' and multi-state vertex syntax 'xh1, xh2, xh3 ...', review capacitance equation."</span>)
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    NeHS_tmp = length(varnumx_tmp);
+                <span class="keyword">end</span>
+                obj.HeadStateVariables = unique(varnamx_tmp');
+            <span class="keyword">else</span>
+                NeHS_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NeHS = NeHS_tmp; <span class="comment">% Assign number of head states</span>
+
+             <span class="comment">% Control Input Number Determination</span>
+            pattern_regexu = <span class="string">'^[u]\d|^[u]$'</span>;
+
+            matchu_tmp = regexp(capeq_var_tmp, pattern_regexu);
+
+            <span class="comment">% Convert From Cell to Array</span>
+            <span class="keyword">if</span> iscell(matchu_tmp)
+                matchu_tmp = ~cellfun(<span class="string">'isempty'</span>,matchu_tmp);
+            <span class="keyword">elseif</span> isempty(matchu_tmp)
+                matchu_tmp = false;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Compute number of control inputs and store variables into list</span>
+
+            <span class="keyword">if</span> any(matchu_tmp) <span class="comment">% There is atleast one matching variable found</span>
+                matchu_idx = find(matchu_tmp); <span class="comment">% Find the indices for matching variable</span>
+                varnamu_tmp = capeq_var_tmp(matchu_idx); <span class="comment">% Return matching variables</span>
+                varnumu_tmp = extractAfter(varnamu_tmp,<span class="string">"u"</span>); <span class="comment">% Return suffix of state variable x</span>
+                <span class="comment">% Valid syntax is either a single state or multiple states</span>
+                isstrempty = strlength(varnumu_tmp) == 0;
+                <span class="keyword">if</span> all(isstrempty)
+                    NeU_tmp = 1;
+                <span class="keyword">else</span>
+                    assert(~any(isstrempty),<span class="string">"Capacitance equation combines single control input syntax 'u' and multi-control input syntax 'u1, u2, u3 ...', review capacitance equation."</span>)
+                    varnumu_tmp = unique(sort(str2double(varnumu_tmp)));
+                    NeU_tmp = length(varnumu_tmp);
+                <span class="keyword">end</span>
+                obj.InputVariables = unique(varnamu_tmp');
+            <span class="keyword">else</span>
+                NeU_tmp = 0;
+            <span class="keyword">end</span>
+
+            obj.NeU = NeU_tmp; <span class="comment">% Assign number of control inputs</span>
+
+        <span class="keyword">end</span>
+</pre>
+<h2 id="3">Graph Model Update</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_EdgeGraphModelUpdate(obj)
+            <span class="keyword">if</span> isempty(obj.GraphEdgeEq)
+                obj.GraphEdgeEq = obj.EdgeEq;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+</pre>
+<h2 id="4">Update Head Vertex Number</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_UpdateHeadVertexNum(obj,VertexNum)
+            obj.HeadVertexNum = VertexNum;
+        <span class="keyword">end</span>
+</pre>
+<h2 id="5">Update Tail Vertex Number</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_UpdateTailVertexNum(obj,VertexNum)
+            obj.TailVertexNum = VertexNum;
+        <span class="keyword">end</span>
+</pre>
+<h2 id="6">Update Graph Specific Head State Variables</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_UpdateGraphHeadStateVar(obj,GraphHeadStateVar_tmp)
+            obj.GraphHeadStateVariables = GraphHeadStateVar_tmp;
+            GraphEdgeEq_tmp = obj.GraphEdgeEq;
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.HeadStateVariables, obj.GraphHeadStateVariables);
+        <span class="keyword">end</span>
+</pre>
+<h2 id="7">Update Graph Specific Tail State Variables</h2>
+<pre class="codeinput">        <span class="keyword">function</span> obj = gmt_UpdateGraphTailStateVar(obj,GraphTailStateVar_tmp)
+            obj.GraphTailStateVariables = GraphTailStateVar_tmp;
+            GraphEdgeEq_tmp = obj.GraphEdgeEq;
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.TailStateVariables, obj.GraphTailStateVariables);
+        <span class="keyword">end</span>
+</pre>
+<pre class="codeinput">    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025a</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% gmt_GraphEdge
+% Class used to define edge properties in graph model
+% EdgeEq syntax
+% State variables must be defined by a "head" or "tail" state denoted by "xh" or "xt" respectively 
+% Note Multi-states and Multi-Control Inputs Case
+% Multi-states and multi-control inputs syntax must be defined starting with the variable 
+% name "xt", "xh" or "u" followed by the number "xh1" "xh2" etc, the numbering of multi-variables
+% starts from 1 and ends at max number of multi-variables. Below is a two head state variable example. 
+% Valid Example: "xh1 + xh2"
+% Invalid Example: "xh1 + xh3"
+% Syntax applies to both multi-state and multi-control inputs. 
+% Note Single State or Single Control Input Case
+% State or control input variables must not have append numbers. Only the variable needs 
+% to be defined if it is applicable. Below is an example of a head state variable and control input. 
+% Valid Example: "xh + u" 
+% Invaid Example: "xh1 + u" or "xh + u1"
+% Syntax applies to both single-state and single-control inputs.
+% The number of state variables does not need to match the number of control inputs. 
+classdef gmt_Edge
+
+properties
+    % User Defined Meta Data
+    EdgeName string % User specified name to define an edge object
+    EdgeEq string % User specified formula defining the edge equation
+    
+end
+
+properties (SetAccess = private)
+    %  Internal Meta Data - Auto-Generated based edge object, runs during constructor method i.e. only an edge object must be defined to define these variables  
+    EdgeType string = gmt_EdgeType.Internal % All edges are assumed to be internal unless specified as external by user
+    NeTS double % Number of tail states in edge equation 
+    NeHS double % Number of head states in edge equation
+    %NeS double % Number of states that are not head or tail state. Future development.
+    NeU double % Number of control inputs in edge equation
+    HeadStateVariables string = [] % List of head state variables defined in edge equation 
+    TailStateVariables string = [] % List of tail state variables defined in edge quation 
+    InputVariables string = [] % List of input variables defined in edge equation
+    ParameterVariables string = [] % List of parameter variables defined in edge equation 
+    % External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables  
+    HeadVertexNum (1,1) = "Unassigned" % Auto assigned graph head vertex number based on EdgeMatrix defintion  
+    TailVertexNum (1,1) = "Unassigned" % Auto assigned graph tail vertex number based on EdgeMatrix defintion
+    GraphHeadStateVariables string = [] % List of head state variables defined in edge equation 
+    GraphTailStateVariables string = [] % List of tail state variables defined in edge quation 
+    GraphEdgeEq string % Auto generated graph equation based on graph model data (Vertices, and EdgeMatrix)
+end
+
+methods
+
+        %% Constructor Method
+        % Generates instance of gmt_GraphEdge object
+        function obj = gmt_Edge(EdgeName,EdgeEq,varargin)
+            % Verify edge name is a string 
+            Name_data_valid = isa(EdgeName,'string');
+            % Verify edge equation is a string
+            Equation_data_valid = isa(EdgeEq,'string');
+    
+            % Determine if edge name input is empty
+            if Name_data_valid
+                Name_blank = logical(strlength(EdgeName)==0);
+                if Name_blank 
+                    error("Name field is empty")
+                end
+            else
+                error("Name field data type is not a string")
+            end
+    
+            % Determine if edge equation input is empty
+            if Equation_data_valid
+                Equation_blank = logical(strlength(EdgeEq)==0);
+                if Equation_blank
+                    error("Equation field is empty")
+                end
+            else 
+                error("Equation field data type is not a string")
+            end
+            
+            % Assign input variable name to EdgeName property 
+            obj.EdgeName = EdgeName; 
+
+            % Assign input variable equation to EdgeEq property 
+            obj.EdgeEq = EdgeEq;
+
+            % Determine if user has specified external edge type
+            numInputs = length(varargin); % Compute number of variable length input arguments 
+
+            % Check variable length input argument if one is assigned 
+            if numInputs == 1 
+                if strcmpi(varargin{1},gmt_EdgeType.External) % Case-insensitive string compare
+                    obj.EdgeType = gmt_EdgeType.External; % Assign edge type to available enumeration 
+                else % Return error is variable input argument does not match upper or lower class spelling
+                    error("Check spelling, user specified edge type other than 'External'. Users only need to define external edge types, internal edge type is default assumption.")
+                end
+            elseif numInputs > 1 % More than one variable return error 
+                error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external edge types.")
+            end
+
+            % Split String By Mathematical Operators and Parentheses
+            capeq_var_tmp = split(obj.EdgeEq,[gmt_Symbols().Symbols,"(",")","^"]);
+
+            % Tail State Number Determination 
+            pattern_regex = '^xt\d|^xt$';
+            match_tmp = regexp(capeq_var_tmp, pattern_regex);
+
+            % Convert From Cell to Array
+            if iscell(match_tmp)
+                match_tmp = ~cellfun('isempty',match_tmp);
+            elseif isempty(match_tmp)
+                match_tmp = false;
+            end
+
+            % Compute number of tail states and store variables into list 
+
+            if any(match_tmp) % There is atleast one matching variable found 
+                match_idx = find(match_tmp); % Find the indices for matching variable 
+                varnamx_tmp = capeq_var_tmp(match_idx); % Return matching variables 
+                varnumx_tmp = extractAfter(varnamx_tmp,"xt"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstrempty = strlength(varnumx_tmp) == 0;
+                if all(isstrempty) 
+                    NeTS_tmp = 1;
+                else 
+                    assert(~any(isstrempty),"Capacitance equation combines single state vertex syntax 'xt' and multi-state vertex syntax 'xt1, xt2, xt3 ...', review capacitance equation.")
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    NeTS_tmp = length(varnumx_tmp);
+                end
+                obj.TailStateVariables = unique(varnamx_tmp');
+            else
+                NeTS_tmp = 0;
+            end
+
+            obj.NeTS = NeTS_tmp; % Assign number of tail states  
+
+            % Head State Number Determination 
+            pattern_regex = '^xh\d|^xh$';
+            match_tmp = regexp(capeq_var_tmp, pattern_regex);
+
+            % Convert From Cell to Array
+            if iscell(match_tmp)
+                match_tmp = ~cellfun('isempty',match_tmp);
+            elseif isempty(match_tmp)
+                match_tmp = false;
+            end
+
+            % Compute number of head states and store variables into list 
+
+            if any(match_tmp) % There is atleast one matching variable found 
+                match_idx = find(match_tmp); % Find the indices for matching variable 
+                varnamx_tmp = capeq_var_tmp(match_idx); % Return matching variables 
+                varnumx_tmp = extractAfter(varnamx_tmp,"xh"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstrempty = strlength(varnumx_tmp) == 0;
+                if all(isstrempty) 
+                    NeHS_tmp = 1;
+                else 
+                    assert(~any(isstrempty),"Capacitance equation combines single state vertex syntax 'xh' and multi-state vertex syntax 'xh1, xh2, xh3 ...', review capacitance equation.")
+                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
+                    NeHS_tmp = length(varnumx_tmp);
+                end
+                obj.HeadStateVariables = unique(varnamx_tmp');
+            else
+                NeHS_tmp = 0;
+            end
+
+            obj.NeHS = NeHS_tmp; % Assign number of head states 
+
+             % Control Input Number Determination 
+            pattern_regexu = '^[u]\d|^[u]$';
+
+            matchu_tmp = regexp(capeq_var_tmp, pattern_regexu);
+
+            % Convert From Cell to Array
+            if iscell(matchu_tmp)
+                matchu_tmp = ~cellfun('isempty',matchu_tmp);
+            elseif isempty(matchu_tmp)
+                matchu_tmp = false;
+            end
+
+            % Compute number of control inputs and store variables into list 
+            
+            if any(matchu_tmp) % There is atleast one matching variable found 
+                matchu_idx = find(matchu_tmp); % Find the indices for matching variable 
+                varnamu_tmp = capeq_var_tmp(matchu_idx); % Return matching variables 
+                varnumu_tmp = extractAfter(varnamu_tmp,"u"); % Return suffix of state variable x
+                % Valid syntax is either a single state or multiple states 
+                isstrempty = strlength(varnumu_tmp) == 0;
+                if all(isstrempty) 
+                    NeU_tmp = 1;
+                else 
+                    assert(~any(isstrempty),"Capacitance equation combines single control input syntax 'u' and multi-control input syntax 'u1, u2, u3 ...', review capacitance equation.")
+                    varnumu_tmp = unique(sort(str2double(varnumu_tmp)));
+                    NeU_tmp = length(varnumu_tmp);
+                end
+                obj.InputVariables = unique(varnamu_tmp');
+            else
+                NeU_tmp = 0;
+            end
+
+            obj.NeU = NeU_tmp; % Assign number of control inputs  
+
+        end
+
+        %% Graph Model Update
+        function obj = gmt_EdgeGraphModelUpdate(obj)
+            if isempty(obj.GraphEdgeEq)
+                obj.GraphEdgeEq = obj.EdgeEq;
+            end
+        end
+
+        %% Update Head Vertex Number 
+        function obj = gmt_UpdateHeadVertexNum(obj,VertexNum)
+            obj.HeadVertexNum = VertexNum;
+        end
+
+        %% Update Tail Vertex Number 
+        function obj = gmt_UpdateTailVertexNum(obj,VertexNum)
+            obj.TailVertexNum = VertexNum;
+        end
+        %% Update Graph Specific Head State Variables 
+        function obj = gmt_UpdateGraphHeadStateVar(obj,GraphHeadStateVar_tmp)
+            obj.GraphHeadStateVariables = GraphHeadStateVar_tmp;
+            GraphEdgeEq_tmp = obj.GraphEdgeEq;
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.HeadStateVariables, obj.GraphHeadStateVariables);
+        end
+
+        %% Update Graph Specific Tail State Variables 
+        function obj = gmt_UpdateGraphTailStateVar(obj,GraphTailStateVar_tmp)
+            obj.GraphTailStateVariables = GraphTailStateVar_tmp;
+            GraphEdgeEq_tmp = obj.GraphEdgeEq;
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.TailStateVariables, obj.GraphTailStateVariables);
+        end
+
+    end
+end
+##### SOURCE END #####
+-->
+</body>
+</html>
