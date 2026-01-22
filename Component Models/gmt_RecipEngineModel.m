@@ -56,7 +56,8 @@ classdef gmt_RecipEngineModel < gmt_Graph
             obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
 
             % Define Connection Ports 
-            % obj.Ports(1) = gmt_(obj,"EdgeConnection",4,"Test");
+            obj.Ports(1) = gmt_ConnectionPort(obj,"VertexConnection",2,"Mechanical");
+            obj.Ports(2) = gmt_ConnectionPort(obj,"EdgeConnection",3,"Thermal");
         end
     end
 end

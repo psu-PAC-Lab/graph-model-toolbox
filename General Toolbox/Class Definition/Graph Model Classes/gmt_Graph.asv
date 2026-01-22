@@ -383,10 +383,12 @@ classdef gmt_Graph
                 end
             end
 
-            makeFunc_mfile = 0;
-
-            if length(varagin) == 2 && varagin(2) == "BuildModel"
-                makeFunc_mfile = 1;   
+            if length(varagin) == 2
+                if varagin(2) == "BuildModel"
+                    makeFunc_mfile = 1;
+                end
+            else 
+                 makeFunc_mfile = 0;
             end
 
             %% Create System M File
@@ -643,6 +645,12 @@ classdef gmt_Graph
                     assert(all(strcmp(firstChar,"u")),"Variable function input do not begin with u syntax")
                     CommonInputs = varagin;
                     TotNumCommonInputs = length(CommonInputs);
+                elseif nargin == 5
+                    if varagin(5) == "BuildModel"
+                        BuildModel_tmp = varagin(5);
+                    else 
+                        BuildModel_tmp = "";
+                    end
                 else
                     CommonInputs = "";
                     TotNumCommonInputs = 0;
@@ -745,13 +753,18 @@ classdef gmt_Graph
             [C, ia, ic] = unique([Params_New.Variable]);
             Params_New = Params_New(ia);
 
-            if nargin == 5 && varagin(5) == "BuildModel"
-                BuildModel_tmp = varagin(5);
-            else 
-                BuildModel_tmp = "";
-            end
+                            elseif nargin == 5
+                    if varagin(5) == "BuildModel"
+                        BuildModel_tmp = varagin(5);
+                    else 
+                        BuildModel_tmp = "";
+                    end
+                else
+                    CommonInputs = "";
+                    TotNumCommonInputs = 0;
+                end
 
-            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,["System",BuildModel_tmp]);   
+            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,"System",BuildModel_tmp);   
 
         end
 
@@ -829,13 +842,7 @@ classdef gmt_Graph
 
             Params_New = obj.ModelParameters;
 
-            if nargin == 3 && varagin(1) == "BuildModel"
-                BuildModel_tmp = varagin(1);
-            else
-                BuildModel_tmp = "";
-            end
-
-            obj = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,["System",BuildModel_tmp]);               
+            obj = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,"System",BuildModel_tmp);                
 
         end
     end

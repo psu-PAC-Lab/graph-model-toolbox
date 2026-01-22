@@ -94,6 +94,14 @@ methods
                 error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external edge types.")
             end
 
+            % Update Internal Metadata
+            obj = gmt_EdgeUpdate(obj);
+
+        end
+
+        %% Internal Metadata Update
+        function obj = gmt_EdgeUpdate(obj)
+
             % Split String By Mathematical Operators and Parentheses
             capeq_var_tmp = split(obj.EdgeEq,[gmt_Symbols().Symbols,"(",")","^"]);
 
@@ -196,8 +204,9 @@ methods
             end
 
             obj.NeU = NeU_tmp; % Assign number of control inputs  
-
+       
         end
+
 
         %% Graph Model Update
         function obj = gmt_EdgeGraphModelUpdate(obj)

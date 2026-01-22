@@ -22,7 +22,7 @@ classdef gmt_ConnectionPort
             
             % Check Parent Object is Graph Class
             superclass_tmp = superclasses(ParentObj);
-            if strcmp(superclass_tmp(2),'gmt_Graph') == false
+            if strcmp(superclass_tmp,'gmt_Graph') == false
                 error("Parent object is not graph class object")
             end
 

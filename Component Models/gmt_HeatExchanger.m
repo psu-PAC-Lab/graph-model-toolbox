@@ -41,7 +41,13 @@ classdef gmt_HeatExchanger < gmt_Graph
             Param(3) = gmt_ModelParameter("Heat Transfer Coefficient","HTC",1,[]);
 
             % Creates an Battery Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,"Component");
+
+            % Define Connection Ports 
+            obj.Ports(1) = gmt_ConnectionPort(obj,"EdgeConnection",1,"Thermal");
+            obj.Ports(2) = gmt_ConnectionPort(obj,"EdgeConnection",2,"Thermal");
+            obj.Ports(3) = gmt_ConnectionPort(obj,"EdgeConnection",3,"Thermal");
+            obj.Ports(4) = gmt_ConnectionPort(obj,"EdgeConnection",4,"Thermal");
 
         end
     end

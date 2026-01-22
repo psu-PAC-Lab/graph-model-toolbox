@@ -12,12 +12,12 @@ classdef gmt_Vertex
         % User Defined Meta Data
         VertexName string % User specified name to define an vertex object
         CapacitanceEq string % User specified name formula defining the vertex capacitance equation
+        VertexType string = gmt_VertexType.Internal % Internally specified vertex type assigned during graph model generation
     end
 
     properties (SetAccess = protected)
         %  Internal Meta Data - Auto-Generated based vertex object, runs during constructor method i.e. only an vertex object must be defined to define these variables 
         StateType string % Internally specified state type based on user define capitance equation formulation
-        VertexType string = gmt_VertexType.Internal % Internally specified vertex type assigned during graph model generation
         NvSa (1,1) double % Number of independent algebraic states within vertex  
         NvSd (1,1) double % Number of independent dynamic state within vertex 
         NvS (1,1) double % Total number of independent states within vertex 
@@ -36,6 +36,7 @@ classdef gmt_Vertex
         GraphCapacitanceEq string = [] % Auto-generated graph specific capacitance equation 
         GraphCapacitance string = [] % Auto-generated graph specific capacitance equation 
         GraphPowerEq string % Auto-generated graph specific power equation 
+        GraphNvE % Auto-generated number of edges connected to vertex
         GraphVertexEq string % Auto-generated graph specific vertex equation 
     end
 
@@ -72,13 +73,6 @@ classdef gmt_Vertex
             obj.VertexName = VertexName; % Assigns input variable Name to VertexName property 
             obj.CapacitanceEq = CapacitanceEquation; % Assigns input variable Equation to CapacitanceEq property 
 
-            % Determines StateType using _dot phrase 
-            if contains(CapacitanceEquation,"_dot") == true
-                obj.StateType = gmt_StateType.Dynamic;
-            else
-                obj.StateType = gmt_StateType.Algebraic;
-            end
-
             % Determine if user has specified external edge type
             numInputs = length(varargin); % Compute number of variable length input arguments 
 
@@ -91,6 +85,21 @@ classdef gmt_Vertex
                 end
             elseif numInputs > 1 % More than one variable return error 
                 error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external vertex types.")
+            end
+
+            obj = gmt_VertexUpdate(obj);
+
+        end
+    
+        %% Internal Metadata Method
+        % Updates based vertex specific information 
+        function obj = gmt_VertexUpdate(obj)
+
+            % Determines StateType using _dot phrase 
+            if contains(obj.CapacitanceEq,"_dot") == true
+                obj.StateType = gmt_StateType.Dynamic;
+            else
+                obj.StateType = gmt_StateType.Algebraic;
             end
 
             % Capacitance Equation Parsing
@@ -232,7 +241,6 @@ classdef gmt_Vertex
 
             obj.NvU = NvU_tmp;
 
-
             % Compute number of outputs 
             if obj.StateType == gmt_StateType.Algebraic
                 % If the state is algebraic then it is an output 
@@ -244,7 +252,6 @@ classdef gmt_Vertex
             end
 
             obj.NvY = NvY_tmp;
-
 
             % Vertex Capacitance 
             Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
@@ -258,11 +265,11 @@ classdef gmt_Vertex
                 obj.Capacitance = match_tmp;
 
             end
+        
         end
-    
-        %% External MetaData Methods
 
-        % Updates graph specific information 
+        %% External Metadata Methods
+        % Updates based graph specific information 
         function obj = gmt_GraphVertexUpdate(obj,Ds_var_tmp, As_var_tmp, y_var_tmp)
 
             % Assign Graph Specifics to Vertex 
@@ -281,10 +288,13 @@ classdef gmt_Vertex
         end
 
         % Updates Power Equations
-        function obj = gmt_GraphVertexEqUpdate(obj,final_tmp)
+        function obj = gmt_GraphVertexEqUpdate(obj,final_tmp,NvE_tmp)
+            % Update vertex number of edge connections 
+            obj.GraphNvE = NvE_tmp;
             % Updates vertex power flow based on edge matrix analysis, and edge equations
             obj.GraphPowerEq = "(" + final_tmp + ")";
             obj.GraphVertexEq = "(1/(" + obj.GraphCapacitance + "))*" + obj.GraphPowerEq;
+            
         end
 
     end

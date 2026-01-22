@@ -63,7 +63,7 @@ classdef gmt_Battery < gmt_Graph
             Param(10) = gmt_ModelParameter("Theraml Conductivity","Rc",0.033078975870769,[]);
 
             % Creates an Battery Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,"CombineNames");
 
             % Define Available Connection Ports 
             % obj.ConnectionPorts(1) = gmt_ConnectionPort(obj,"EdgeConnection",4,"Electrical");
