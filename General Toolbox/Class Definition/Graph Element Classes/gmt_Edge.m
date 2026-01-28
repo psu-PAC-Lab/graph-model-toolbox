@@ -22,7 +22,6 @@ properties
     % User Defined Meta Data
     EdgeName string % User specified name to define an edge object
     EdgeEq string % User specified formula defining the edge equation
-    
 end
 
 properties (SetAccess = private)

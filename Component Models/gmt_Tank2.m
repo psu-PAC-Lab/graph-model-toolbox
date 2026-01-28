@@ -2,7 +2,7 @@
 % Defines a Fluid Tank
 
 %% Class Defintion and Superclass Reference
-classdef gmt_Tank < gmt_Graph
+classdef gmt_Tank2 < gmt_Graph
 
     %% Properties 
     properties
@@ -10,7 +10,7 @@ classdef gmt_Tank < gmt_Graph
 
     methods
         %% Constructor Method
-        function obj = gmt_Tank(ObjectName,varargin)
+        function obj = gmt_Tank2(ObjectName,varargin)
 
             % Define Vertices 
             % We want to be able to specify vertex equation with any other state if required
@@ -22,9 +22,9 @@ classdef gmt_Tank < gmt_Graph
             Vertices(5) = gmt_Vertex("Outlet Temperature","cp_f*V*Rho*x_dot","External");
 
             % Define Edges 
-            Edges(1) = gmt_Edge("Advection In","cp_f*u1*xt");
-            Edges(2) = gmt_Edge("Advection Out","cp_f*u2*xt");
-            Edges(3) = gmt_Edge("Tank Fill Rate","(u1-u2)");
+            Edges(1) = gmt_Edge("Advection In","cp_f*u1*xh");
+            Edges(2) = gmt_Edge("Advection Out","cp_f*u1*xt");
+            Edges(3) = gmt_Edge("Tank Fill Rate","(-u1)");
 
             % Define Edge Matrix
             EdgeMatrix = [4 1; ...

@@ -40,7 +40,7 @@ classdef gmt_DCMotor < gmt_Graph
             Param(7) = gmt_ModelParameter("Motor Torque Constant","Kt",1,[]);
 
             % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,"CombineNames");
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
 
             % Define Available Connection Ports 
             % Define Connection Ports 

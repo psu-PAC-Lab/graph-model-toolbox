@@ -15,20 +15,16 @@ classdef gmt_Graph
         Outputs string = [] % String array of system output variable names
         %Disturbances string = [] % String array of system disturbance variable names
         ModelParameters gmt_ModelParameter % Model parameters object to manage model parameterization  
-        EdgeTable table % Human readable summary of edge data
-        VertexTable table % Human readable summary of vertex data
         SystemEquations string % Symbolic system of equations for system
-        StateInitialConditions 
-        MassMatrix % Mass Matrix for ODE Solver 
+        InitialConditions 
+        ModelMetadata = struct("ModelType",[],"MfileCode",[],"MassMatrix",[]) 
         Ports gmt_ConnectionPort % Object containing graph model connection points
-        MfileCode 
-        ModelType gmt_ModelType % Determines model type for post analysis
     end
 
     %% Public Methods 
     methods (Access = public)
         %% Constructor Graph 
-        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters,varagin)
+        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters,varargin)
             % Generates instance of gmt_Graph object
             % Assign Data
             obj.Name = Name;
@@ -40,16 +36,11 @@ classdef gmt_Graph
             % Compute Basic Graph Properties (Nv, Ne, and M) 
             obj.Properties = gmt_GraphProperties(obj);
 
-            % Graph Update
-            obj = gmt_GraphUpdate(obj);
+            % DiGraph Update
+            obj = gmt_DiGraphUpdate(obj);
 
-            % Model Update
-            if nargin == 6 || nargin == 7
-                obj = gmt_ModelUpdate(obj,varagin);
-            else
-                obj = gmt_ModelUpdate(obj,"");
-            end
-       
+            % Build Model
+            obj = gmt_ModelUpdate(obj,varargin{:});
         end
 
         %% Graph Report
@@ -116,11 +107,30 @@ classdef gmt_Graph
 
         end
 
-        %% Graph Update
-        % Function creates MATLAB native graph object and updates properties for plotting  
-        function obj = gmt_GraphUpdate(obj)
-         
-            % Note need to update naming and graph object information 
+        %% Connection Report  
+        % Searches the possible connection for graph object
+        function gmt_ConnectionReport(obj)
+            num_params = length(obj.Ports);
+            varNames_tmp = ["Description","PortType", "Element Number"];
+            for idx_tmp = 1:length(varNames_tmp)
+                varTypes_tmp(1,idx_tmp) = {'string'};
+            end
+            sz = [num_params length(varNames_tmp)];
+            table_tmp = table('Size',sz,'VariableTypes',varTypes_tmp,'VariableNames',varNames_tmp);
+            for i = 1:num_params
+                table_tmp(i,1) = {obj.Ports(i).Description};
+                table_tmp(i,2) = {obj.Ports(i).PortType};
+                table_tmp(i,3) = {obj.Ports(i).ElementNumber};
+            end
+
+            fprintf('\n'); disp(table_tmp) 
+
+        end
+
+        % 
+        % end
+        %% DiGraphUpdate
+        function obj = gmt_DiGraphUpdate(obj)
 
             % Vertex Color Coding
             for i = 1:obj.Properties.Nv
@@ -146,7 +156,6 @@ classdef gmt_Graph
             % Updates direct graph object propeties 
             obj.DiGraph = digraph(obj.EdgeMatrix(:,1),obj.EdgeMatrix(:,2));
 
-
             % Reorganize Edge Labels and Color Codes 
             Edges_Names_rotmp = Edges_Names_tmp;
             color_rotmp2 = color_tmp2;
@@ -170,8 +179,14 @@ classdef gmt_Graph
             
             % Update Color
             obj.DiGraph.Nodes.NodeColor = color_tmp;
-            obj.DiGraph.Edges.EdgeColor = color_rotmp2;
-        
+            obj.DiGraph.Edges.EdgeColor = color_rotmp2;     
+
+        end
+
+        %% Plot DiGraph
+        % Function creates MATLAB native graph object and updates properties for plotting  
+        function gmt_PlotGraph(obj)
+            figure
             p = plot(obj.DiGraph,'LineWidth',1,'Layout','subspace');
             % Set Edge Labels
             p.EdgeLabel = obj.DiGraph.Edges.EdgeLabel;
@@ -193,17 +208,20 @@ classdef gmt_Graph
             'HorizontalAlignment', 'left',...
             'FontSize', 7)
             p.NodeLabel = {}; 
-        end
-
-        function out = gmt_ModelParameters(obj)
-
-            out = obj.ModelParameters;
 
         end
-
+       
         %% Model Update 
         % Once all vertices, edges, and edge matrix has been defined a model can be generated 
-        function obj = gmt_ModelUpdate(obj,varagin)
+        function obj = gmt_ModelUpdate(obj,varargin)
+
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, 'BuildModel', false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
+            parse(p, varargin{:});
+            makeFunc_mfile  = p.Results.BuildModel;
+            componentMdl = ~p.Results.SystemModel;
 
             % Updates graph properties object and performs validation checks
             if obj.Properties.GraphValidity.GraphValid && obj.Properties.GraphValidity.VerticesValid && obj.Properties.GraphValidity.EdgesValid
@@ -367,12 +385,12 @@ classdef gmt_Graph
 
             % Determine Model Type 
             if any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Lookup) || any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Neural_Network)
-                obj.ModelType = gmt_ModelType.Numerical;
+                obj.ModelMetadata.ModelType = gmt_ModelType.Numerical;
             else
-                obj.ModelType = gmt_ModelType.Analytical;
+                obj.ModelMetadata.ModelType = gmt_ModelType.Analytical;
             end
 
-            if varagin(1) == "Component"
+            if componentMdl
                 % Append Edge and Vertex Names By Component Name
                 for i = 1:length(obj.Edges)
                     obj.Edges(i).EdgeName = obj.Name + ": " + obj.Edges(i).EdgeName; 
@@ -383,15 +401,7 @@ classdef gmt_Graph
                 end
             end
 
-            makeFunc_mfile = 0;
-
-            if length(varagin) == 2 && varagin(2) == "BuildModel"
-                makeFunc_mfile = 1;   
-            end
-
-            %% Create System M File
-            % TASK: Make user defined input to generated this function 
-            
+            %% Create System Model in M File          
             if makeFunc_mfile 
 
                 % System Function Header
@@ -430,7 +440,7 @@ classdef gmt_Graph
                     fields = fieldnames(obj.ModelParameters(LookupParams_idx).Data);
                     mFileLines = cell(length(fields), 1);
                     
-                    % 3. Loop through fields to create "LHS = RHS;" strings
+                    % Loop through fields to create "LHS = RHS;" strings
                     for i = 1:numel(fields)
                         fieldName = fields{i};
                         val = obj.ModelParameters(LookupParams_idx).Data.(fieldName); % Dynamic access
@@ -453,7 +463,19 @@ classdef gmt_Graph
                         mFileLines{i} = sprintf('%s = %s;', fieldName, rhs);
                     end
     
-                    sysfun_mfile_lookup = string(mFileLines);
+                    sysfun_mfile_lookup_tmp = string(mFileLines);
+
+                    % Find if user specified function lookup outside of edge equation 
+                    sysfun_lookup_func_idx_tmp = find(contains([obj.ModelParameters(LookupParams_idx).Variable],"="));
+                    sysfun_lookup_func_idx = LookupParams_idx(sysfun_lookup_func_idx_tmp);
+
+                    if ~isempty(sysfun_lookup_func_idx)
+                        sys_mfile_lookup2_tmp = [obj.ModelParameters(sysfun_lookup_func_idx).Variable] + ";";
+                    else
+                        sys_mfile_lookup2_tmp = [];
+                    end
+
+                    sysfun_mfile_lookup = [sysfun_mfile_lookup_tmp;sys_mfile_lookup2_tmp];
 
                 else 
 
@@ -489,7 +511,7 @@ classdef gmt_Graph
                     sysfun_mfile_suffix;...
                     sysfun_mfile_footer];
 
-                obj.MfileCode = sysfun_mfile_combined;
+                obj.ModelMetadata.MfileCode = sysfun_mfile_combined;
 
                 gmt_root = string(extractBefore(which('gmt_Graph.m'),'\General Toolbox'));
                 sys_mdl_flder_tmp = "\System Models\";
@@ -516,20 +538,24 @@ classdef gmt_Graph
                 NsD_tmp = sum(([obj.Vertices.StateType]==gmt_StateType.Dynamic));
                 NsA_tmp = sum(([obj.Vertices.StateType]==gmt_StateType.Algebraic));
 
-                obj.MassMatrix = blkdiag(eye(NsD_tmp),zeros(NsA_tmp));
+                obj.ModelMetadata.MassMatrix = blkdiag(eye(NsD_tmp),zeros(NsA_tmp));
 
             end
 
         end
         
     end
-    
+    %% Static Public Methods
     methods (Static)
+        %% Graph Simple Combination Function NOTE: Need to work on algorithm   
+        % Algorithm for connection two components together
+        function objC = gmt_CombineSimple(objA, objB, Connection, varargin)
 
-        %% Graph Combination Function 
-        function objC = gmt_CombineSimple(objA, objB, Connection, varagin)
-
-            assert(objA.Ports(Connection(1)).PortType == objB.Ports(Connection(2)).PortType,"Connection Type Does Not Match") 
+            %% Setup and Data Validation 
+            % Data Validation 
+            PortA_tmp = objA.Ports(Connection(1)).PortType;
+            PortB_tmp = objB.Ports(Connection(2)).PortType;
+            assert(PortA_tmp==PortB_tmp,"Connection Type Does Not Match") 
 
             % Component Incidence Matrices 
             M_a = objA.Properties.M;
@@ -539,34 +565,40 @@ classdef gmt_Graph
             objA_tmp = objA;
             objB_tmp = objB;
 
+            %% Varagin Proccessing     
+            % Input Parsing and Data Validation 
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, 'CombineInputs', [], @(s) isstring(s) && size(s,2) == 2);
+            parse(p, varargin{:});
+            CommonInputs = p.Results.CombineInputs;
+            TotNumCommonInputPairs = size(CommonInputs,1);
             %% Vertex Connection Case
             if objA.Ports(Connection(1,1)).PortType == gmt_PortType.VertexConnection
 
-                % System Incidence Matrices 
-                M_c = zeros((size(M_a,1)+size(M_b,1)-1),(size(M_a,2)+size(M_b,2)));
-
-                % Grab Vertex Element Numbers  
+                %% Setup and Data Validation 
                 Vertex_A = objA.Ports(Connection(1)).ElementNumber;
                 Vertex_B = objB.Ports(Connection(2)).ElementNumber;
 
-                % Compare Capacitance Equation 
-                if ~strcmp(objA.Vertices(Vertex_A).CapacitanceEq,objB.Vertices(Vertex_B).CapacitanceEq)
-                    error("Vertices do not share common capacitance equation")
-                end
+                VertexA_CapEq = objA.Vertices(Vertex_A).CapacitanceEq;
+                VertexB_CapEq = objB.Vertices(Vertex_B).CapacitanceEq;
+ 
+                assert(~strcmp(VertexA_CapEq,VertexB_CapEq),"Vertices do not share common capacitance equation")
 
-                % Construct Incidence Matrix 
-                % Append Edges to Common Vertex 
+                %% Incidence Matrix Creation 
+                % Append Edges to Common Vertex
+                M_c = zeros((size(M_a,1)+size(M_b,1)-1),(size(M_a,2)+size(M_b,2)));
                 M_c(1:size(M_a,1),1:size(M_a,2)) = M_a;
                 M_c(Vertex_A,size(M_a,2)+1:end) = M_b(Vertex_B,:);
                 M_b_idx = 1:size(M_b,1);
                 M_b_idx(Vertex_B) = [];
                 M_c(size(M_a,1)+1:end,size(M_a,2)+1:end) = M_b(M_b_idx,:);
 
-                % New Edges and Vertices 
+                %% Create New Edge and Vertex Vectors
                 Vertices_New = [objA.Vertices,objB.Vertices(M_b_idx)];
                 Edges_New = [objA.Edges,objB.Edges];
 
-                % Construct New Edge Matrix
+                %% Construct New Edge Matrix from Incidence
                 for i = 1:size(M_c,2)
                     for j = 1:size(M_c,1)
                         idx_tmp = M_c(j,i);
@@ -581,14 +613,19 @@ classdef gmt_Graph
             %% Edge Connection Case
             elseif objA.Ports(Connection(1)).PortType == gmt_PortType.EdgeConnection
 
-                % Grab Edge Element Numbers  
+                %% Setup and Data Validation  
                 Edge_A = objA.Ports(Connection(1)).ElementNumber;
                 Edge_B = objB.Ports(Connection(2)).ElementNumber;
 
-                % Determine Vertex to remove from each 
+                % Vertex Removal Analysis 
+                % Edge A
                 EA_hvn = objA.Edges(Edge_A).HeadVertexNum;
                 EA_tvn = objA.Edges(Edge_A).TailVertexNum;
+                % Edge B
+                EB_hvn = objB.Edges(Edge_B).HeadVertexNum;
+                EB_tvn = objB.Edges(Edge_B).TailVertexNum;
 
+                % EdgeA HeadTail Vertex Assignment
                 if objA.Vertices(EA_hvn).GraphNvE == 1
                     EA_v2r = EA_hvn;
                 elseif objA.Vertices(EA_tvn).GraphNvE == 1
@@ -597,9 +634,7 @@ classdef gmt_Graph
                     error("New case identified, notify developer")
                 end
 
-                EB_hvn = objB.Edges(Edge_B).HeadVertexNum;
-                EB_tvn = objB.Edges(Edge_B).TailVertexNum;
-
+                % EdgeB HeadTail Vertex Assignment
                 if objB.Vertices(EB_hvn).GraphNvE == 1
                     EB_v2r = EB_hvn;
                 elseif objB.Vertices(EB_tvn).GraphNvE == 1
@@ -608,7 +643,7 @@ classdef gmt_Graph
                     error("New case identified, notify developer")
                 end
                 
-                % Create Vertex Indexing Vectors 
+                %% Incidence Matrix Creation 
                 M_a_vidx = 1:size(M_a,1);
                 M_a_vidx(EA_v2r) = [];
                 M_b_vidx = 1:size(M_b,1);
@@ -630,104 +665,86 @@ classdef gmt_Graph
                 M_b_eidx(Edge_B) = [];
                 M_c(size(M_a,1)+1:end,size(M_a,2)+1:end) = M_b(:,M_b_eidx);
 
+                %% Input Variable Assignment 
+                EdgeA_inputs = objA.Edges(Edge_A).InputVariables;
+                EdgeB_inputs = objB.Edges(Edge_B).InputVariables;
+                assert(length(EdgeA_inputs)==length(EdgeB_inputs),"Each edge equation has a unique number of control inputs")
+
                 % Inputs Variable Update
+                % Assumption all inputs are unique unless otherwise specified or identified 
                 AllInputsA = unique([[objA.Vertices.InputVariables],[objA.Edges.InputVariables]]);
                 TotNumInputsA = length(AllInputsA);
                 AllInputsB = unique([[objB.Vertices.InputVariables],[objB.Edges.InputVariables]]);
                 TotNumInputsB = length(AllInputsB);
-                
-                % Determine Common Input Variables 
-                if nargin == 4
-                    assert(all(isstring(varagin)),"Variable function input is not of type string")
-                    firstChar = extractBetween(varagin, 1, 1);
-                    assert(all(strcmp(firstChar,"u")),"Variable function input do not begin with u syntax")
-                    CommonInputs = varagin;
-                    TotNumCommonInputs = length(CommonInputs);
+
+                InputNewNumsB = TotNumInputsA+1:(TotNumInputsA+TotNumInputsB);
+                NewInputsB = "u" + string(InputNewNumsB);
+
+                % Renumber objB based on number of inputs in object A and object B 
+                for i = 1:length(objB_tmp.Edges)  
+                    objB_tmp.Edges(i).EdgeEq = replace(objB_tmp.Edges(i).EdgeEq,AllInputsB,NewInputsB);
+                end
+
+                for j = 1:length(objB_tmp.Vertices)
+                    objB_tmp.Vertices(j).CapacitanceEq = replace(objB_tmp.Vertices(j).CapacitanceEq,AllInputsB,NewInputsB);
+                end
+
+                % Edge Input Commonization 
+                NewInputsEdgeBNum = double(extractAfter(EdgeB_inputs, "u")) + TotNumInputsA;
+                NewInputsEdgeB_rep = "u" + string(NewInputsEdgeBNum);
+
+                % User Defined INput Commonization 
+                if ~isempty(CommonInputs)
+                    EdgeA_ComInputs_user = CommonInputs(:,1); 
+                    UserInputsEdgeBNm = double(extractAfter(CommonInputs(:,2), "u")) + TotNumInputsA;
+                    UserInputsEdgeB_rep = "u" + string(UserInputsEdgeBNm);
                 else
-                    CommonInputs = "";
-                    TotNumCommonInputs = 0;
-                end
-                
-                % Determine Unique Input Variables
-                UniqueInputsA = setdiff(AllInputsA, CommonInputs);
-                TotNumUniqueInputsA = length(UniqueInputsA);
-                NewInputsA = [];
-
-                UniqueInputsB = setdiff(AllInputsB, CommonInputs);
-                TotNumUniqueInputsB = length(UniqueInputsB);
-                NewInputsB = [];
-                
-                CommonInputNum = str2double(string(regexp(CommonInputs, '(?<=u)\d+', 'match')));
-
-                if TotNumUniqueInputsA > 0 
-                    InputNewNumsA = 1:(TotNumCommonInputs+TotNumUniqueInputsA);
-                    InputNewNumsA(CommonInputNum) = [];
-                    NewInputsA = "u" + string(InputNewNumsA); 
-                end 
-
-                if TotNumUniqueInputsB > 0 
-                    InputNewNumsB = max(InputNewNumsA)+1:(TotNumCommonInputs+TotNumUniqueInputsA+TotNumUniqueInputsB);
-                    InputNewNumsB(CommonInputNum) = [];
-                    NewInputsB = "u" + string(InputNewNumsB);
+                    EdgeA_ComInputs_user = [];
+                    UserInputsEdgeBNm = [];
+                    UserInputsEdgeB_rep = [];
                 end
 
-                if ~isempty(NewInputsA)
-                    for i = 1:length(InputNewNumsA)
-                        A_vidx = find(contains([objA_tmp.Vertices.CapacitanceEq],UniqueInputsA(i)));
-                        A_eidx = find(contains([objA_tmp.Edges.EdgeEq],UniqueInputsA(i)));
-    
-                        if ~isempty(A_vidx) 
-                            for j = 1:length(A_vidx)
-                                objA_tmp.Vertices(A_vidx(j)).CapacitanceEq = replace(objA_tmp.Vertices(A_vidx(j)).CapacitanceEq,UniqueInputsA(i),NewInputsA(i));
-                            end
-                        end
-    
-                        if ~isempty(A_eidx) 
-                            for k = 1:length(A_eidx)
-                                objA_tmp.Edges(A_eidx(k)).EdgeEq = replace(objA_tmp.Edges(A_eidx(k)).EdgeEq,UniqueInputsA(i),NewInputsA(i));
-                            end
-                        end
-    
-                    end
-                end
-
-               if ~isempty(NewInputsB)
-                    for i = 1:length(NewInputsB)
-                        A_vidx = find(contains([objB_tmp.Vertices.CapacitanceEq],UniqueInputsB(i)));
-                        A_eidx = find(contains([objB_tmp.Edges.EdgeEq],UniqueInputsB(i)));
-    
-                        if ~isempty(A_vidx) 
-                            for j = 1:length(A_vidx)
-                                objB_tmp.Vertices(A_vidx(j)).CapacitanceEq = replace(objB_tmp.Vertices(A_vidx(j)).CapacitanceEq,UniqueInputsB(i),NewInputsB(i));
-                            end
-                        end
-    
-                        if ~isempty(A_eidx) 
-                            for k = 1:length(A_eidx)
-                                objB_tmp.Edges(A_eidx(k)).EdgeEq = replace(objB_tmp.Edges(A_eidx(k)).EdgeEq,UniqueInputsB(i),NewInputsB(i));
-                            end
-                        end
-    
-                    end
-               end
-
-                % New Edges and Vertices 
+                % % Setup Replacement Vectors
+                % EdgeA_Input_vector = unique([EdgeA_inputs; EdgeA_ComInputs_user]);
+                % EdgeBNew_Input_vector = unique([NewInputsEdgeB_rep; UserInputsEdgeB_rep]);
+                % assert(length(EdgeA_Input_vector)==length(EdgeBNew_Input_vector),"The number of inputs being replaced does not match, check user defined common input.")
+                % 
+                % if length(EdgeA_Input_vector) ~= length([EdgeA_inputs; EdgeA_ComInputs_user]) || length(EdgeBNew_Input_vector) ~= length([NewInputsEdgeB_rep; UserInputsEdgeB_rep])
+                %     warning("Note: User defined common control inputs matches automated edge commonization pair. User defined commonization likely not required.")
+                % end
+                % 
+                % for i = 1:length(objB_tmp.Edges)
+                %     objB_tmp.Edges(i).EdgeEq = replace(objB_tmp.Edges(i).EdgeEq,EdgeBNew_Input_vector,EdgeA_Input_vector);
+                % end
+                % 
+                % for j = 1:length(objB_tmp.Vertices)
+                %     objB_tmp.Vertices(j).CapacitanceEq = replace(objB_tmp.Vertices(j).CapacitanceEq,EdgeBNew_Input_vector,EdgeA_Input_vector);
+                % end
+           
+                %% Create New Edge and Vertex Vectors 
                 % Join the edges and vertex arrays together less the remove or common elements 
-
                 VerticesNew = [objA_tmp.Vertices(M_a_vidx),objB_tmp.Vertices(M_b_vidx)];
                 EdgeNew = [objA_tmp.Edges,objB_tmp.Edges(M_b_eidx)];
 
                 % Update Vertex Objects
                 for i = 1:length(VerticesNew)
-                    VertexUpdated(i) = VerticesNew(i).gmt_VertexUpdate();
+                    if VerticesNew(i).VertexType == gmt_VertexType.External
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType));
+                    else
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq);
+                    end
                 end
 
                 % Update Edge Objects
                 for j = 1:length(EdgeNew)
-                    EdgeUpdated(j) = EdgeNew(j).gmt_EdgeUpdate();
+                    if string(EdgeNew(j).EdgeType) == gmt_EdgeType.External
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq,string(EdgeNew(j).EdgeType));
+                    else
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq);
+                    end
                 end
 
-                % Construct New Edge Matrix
+                %% Construct New Edge Matrix from Incidence
                 for i = 1:size(M_c,2)
                     for j = 1:size(M_c,1)
                         idx_tmp = M_c(j,i);
@@ -740,22 +757,89 @@ classdef gmt_Graph
                 end   
 
             end
-            % Update Model Parameterization 
+
+            %% Update Model Parameterization 
+            % Need to be able to handle cases where variable is same between multiple models but needs to be unique and vice versa
             Params_New = [objA_tmp.ModelParameters, objB_tmp.ModelParameters];
             [C, ia, ic] = unique([Params_New.Variable]);
             Params_New = Params_New(ia);
 
-            if nargin == 5 && varagin(5) == "BuildModel"
-                BuildModel_tmp = varagin(5);
-            else 
-                BuildModel_tmp = "";
+            %% Update System Port Connections 
+            PortsA_idx = 1:length(objA_tmp.Ports);
+            PortsA_idx_keep = setdiff(PortsA_idx,Connection(1));
+            PortsA = objA_tmp.Ports(PortsA_idx_keep);
+
+            PortsB_idx = 1:length(objB_tmp.Ports);
+            PortsB_idx_keep = setdiff(PortsB_idx,Connection(2));
+            PortsB = objB_tmp.Ports(PortsB_idx_keep);
+
+            % Update EdgeType Port Element Numbering
+            EdgeB_NumOld = 1:length(objB.Edges);
+            EdgeB_NumOld(Edge_B) = [];
+            EdgeB_NumNew = (length(objA.Edges)+1):size(M_c,2);
+            PortB_Edge_idx = find([PortsB.PortType] == gmt_PortType.EdgeConnection);
+            [tf, loc] = ismember([PortsB(PortB_Edge_idx).ElementNumber], EdgeB_NumOld);
+            PortB_ElNumNew = EdgeB_NumNew(loc(tf));  
+            PortB_EdgeLookup_idx = PortB_Edge_idx(tf);
+
+            for i = 1:length(PortB_ElNumNew)
+                PortsB(PortB_EdgeLookup_idx(i)).ElementNumber = PortB_ElNumNew(i);
             end
 
-            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,["System",BuildModel_tmp]);   
+            % Update VertexType Port Element Numbering
+            VerticesB_NumOld = 1:length(objB.Vertices);
+            VerticesB_NumOld(EB_v2r) =[];
+            VerticesB_NumNew = length(objA.Vertices):size(M_c,1);
+            % Determine indices with vertex connection 
+            PortB_Vertex_idx = find([PortsB.PortType] == gmt_PortType.VertexConnection);
+            % Determine required mapping 
+            [tf2, loc2] = ismember([PortsB(PortB_Vertex_idx).ElementNumber], VerticesB_NumOld);
+            PortB_ElNumNew2 = VerticesB_NumNew(loc2(tf2));  
+            PortB_VertexLookup_idx = PortB_Vertex_idx(tf2);
+
+            % Need to index properly here
+            for i = 1:length(PortB_ElNumNew2)
+                PortsB(PortB_VertexLookup_idx(i)).ElementNumber = PortB_ElNumNew2(i);
+            end
+                
+            % Find Unique Edge Port Connections and Vertex Port Connections
+            PortA_Edge_idx = [PortsA.PortType]==gmt_PortType.EdgeConnection;
+            PortA_Vertex_idx = [PortsA.PortType]==gmt_PortType.VertexConnection;
+
+            PortB_Edge_idx = [PortsB.PortType]==gmt_PortType.EdgeConnection;
+            PortB_Vertex_idx = [PortsB.PortType]==gmt_PortType.VertexConnection;
+
+            Common_Edge_PortsElNum = intersect([PortsA(PortA_Edge_idx).ElementNumber],[PortsB(PortB_Edge_idx).ElementNumber]);
+            Common_Vertex_PortsElNum = intersect([PortsA(PortA_Vertex_idx).ElementNumber],[PortsB(PortB_Vertex_idx).ElementNumber]);
+
+            PortB_tmp = [];
+            if ~isempty(Common_Edge_PortsElNum)
+                PortB_tmp = PortsB([PortsB.ElementNumber] ~= Common_Edge_PortsElNum);
+            end
+
+            if ~isempty(Common_Vertex_PortsElNum)
+                PortB_tmp = [PortB_tmp; PortsB([PortsB.ElementNumber] ~= Common_Vertex_PortsElNum)];
+            end
+
+            if isempty(Common_Edge_PortsElNum) && isempty(Common_Vertex_PortsElNum)
+                PortB_tmp = PortsB;
+            end
+
+            Ports_tmp = [PortsA(:); PortB_tmp(:)]';
+
+
+            %% BuildGraphModel 
+            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,varargin{:});
+            %% Create New Port Objects
+            for i = 1:length(Ports_tmp)
+                objC.Ports(i) = gmt_ConnectionPort(objC,string(Ports_tmp(i).PortType),Ports_tmp(i).ElementNumber,string(Ports_tmp(i).EnergyDomain));
+            end
 
         end
 
-        function obj = gmt_CombineSys(obj,Connection,varagin)
+        %% System Connection Graph
+        % Algorithm for closing system
+        function obj = gmt_CombineSys(obj,Connection,varargin)
 
             assert(obj.Ports(Connection(1)).PortType == obj.Ports(Connection(2)).PortType,"Connection Type Does Not Match") 
 
@@ -800,17 +884,41 @@ classdef gmt_Graph
                 M_c(:,Edge_A) = M_c(:,Edge_B) + M_c(:,Edge_A);
                 M_c(:,Edge_B) = [];
 
+                %% Input Commonization 
+
+                EdgeA_inputs = obj.Edges(Edge_A).InputVariables;
+                EdgeB_inputs = obj.Edges(Edge_B).InputVariables;
+                %assert(length(EdgeA_inputs)==length(EdgeB_inputs),"Each edge equation has a unique number of control inputs")     
+
+                % 
+                % Input Commonization
+                % for i = 1:length(obj.Edges)
+                %     obj_tmp.Edges(i).EdgeEq = replace(obj_tmp.Edges(i).EdgeEq,EdgeB_inputs,EdgeA_inputs);
+                % end
+                % 
+                % for j = 1:length(obj.Vertices)
+                %     obj_tmp.Vertices(j).CapacitanceEq = replace(obj_tmp.Vertices(j).CapacitanceEq,EdgeB_inputs,EdgeA_inputs);
+                % end
+                % 
                 VerticesNew = obj_tmp.Vertices(M_c_vidx);
                 EdgeNew = obj_tmp.Edges(M_c_eidx);
 
                 % Update Vertex Objects
                 for i = 1:length(VerticesNew)
-                    VertexUpdated(i) = VerticesNew(i).gmt_VertexUpdate();
+                    if VerticesNew(i).VertexType == gmt_VertexType.External
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType));
+                    else
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq);
+                    end
                 end
 
                 % Update Edge Objects
                 for j = 1:length(EdgeNew)
-                    EdgeUpdated(j) = EdgeNew(j).gmt_EdgeUpdate();
+                    if string(EdgeNew(j).EdgeType) == gmt_EdgeType.External
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq,string(EdgeNew(j).EdgeType));
+                    else
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq);
+                    end
                 end
 
                 % Construct New Edge Matrix
@@ -825,153 +933,73 @@ classdef gmt_Graph
                     end
                 end   
 
+
+            elseif obj.Ports(Connection(1)).PortType == gmt_PortType.VertexConnection
+
+                %% Setup and Data Validation 
+                Vertex_A = obj.Ports(Connection(1)).ElementNumber;
+                Vertex_B = obj.Ports(Connection(2)).ElementNumber;
+
+                VertexA_CapEq = obj.Vertices(Vertex_A).CapacitanceEq;
+                VertexB_CapEq = obj.Vertices(Vertex_B).CapacitanceEq;
+ 
+                assert(strcmp(VertexA_CapEq,VertexB_CapEq),"Vertices do not share common capacitance equation")
+
+                %% Incidence Matrix Creation 
+                % Append Edges to Common Vertex
+                M_c = obj.Properties.M;
+                M_c(Vertex_A,:) = M_c(Vertex_A,:)+M_c(Vertex_B,:);
+                M_c(Vertex_B,:) = [];
+
+                %% Create New Edge and Vertex Vectors
+                Vertices_Keep_idx = 1:length(obj.Vertices);
+                Vertices_Keep_idx(Vertex_B) = [];
+                VerticesNew = [obj.Vertices(Vertices_Keep_idx)];
+                EdgeNew = [obj.Edges];
+
+                %% Construct New Edge Matrix from Incidence
+                for i = 1:size(M_c,2)
+                    for j = 1:size(M_c,1)
+                        idx_tmp = M_c(j,i);
+                        if idx_tmp == 1
+                            EdgeMatrix_New(i,2) = j;             
+                        elseif idx_tmp == -1
+                            EdgeMatrix_New(i,1) = j;
+                        end
+                    end
+                end       
+
+                % Update Vertex Objects
+                for i = 1:length(VerticesNew)
+                    if VerticesNew(i).VertexType == gmt_VertexType.External
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType));
+                    else
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq);
+                    end
+                end
+
+                % Update Edge Objects
+                for j = 1:length(EdgeNew)
+                    if string(EdgeNew(j).EdgeType) == gmt_EdgeType.External
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq,string(EdgeNew(j).EdgeType));
+                    else
+                        EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq);
+                    end
+                end
+
             end
 
             Params_New = obj.ModelParameters;
 
-            if nargin == 3 && varagin(1) == "BuildModel"
-                BuildModel_tmp = varagin(1);
-            else
-                BuildModel_tmp = "";
-            end
+            %% Update System Port Connections 
+            Ports_idx = 1:length(obj.Ports);
+            PortsA_idx_keep = setdiff(Ports_idx,[Connection(1);Connection(2)]);
+            PortsA = obj.Ports(PortsA_idx_keep);
 
-            obj = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,["System",BuildModel_tmp]);               
+            obj_tmp = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,varargin{:});  
+            obj_tmp.Ports = [PortsA(:)]';
+            obj = obj_tmp;
 
         end
     end
-    % 
-    %     function objC = gmt_Combine(CompM_Edge,EdgeC,CompM_Vertex,VertexC)
-    %         % Joe Pisani 12/19/2025 GraphTools uses concept of Ports which are user defined model connection points 
-    %         % The algorithm C. Aksland uses requires specification of common vertices and edges together. 
-    %         % Recommend using graph theory to combine graphs, but laplacians are not unique they can only tell us if the combined graph is correct or not. ... 
-    %         % They are not invertible, meaning they are linear dependent, meaning there are multiplie solutions. 
-    %         % More details on GraphTools algorithm, an incidence matrix is computed based on head and tail state defintions. 
-    %         % Chris tells use we must specify the vertex pair to be removed when an edge is removed 
-    %         % Do we want to use the port concept or be more generic? 
-    % 
-    %         % Need to update internal and external vertex and edge definition areas 
-    % 
-    %         % CompM is dimension {:,2}, meaning two components 
-    %         CompM_Edge_len = size(CompM_Edge,1);
-    %         CompM_Edge_width = size(CompM_Edge,2);
-    %         EdgeC_len = size(EdgeC,1);
-    % 
-    %         CompM_Vertex_len = size(CompM_Vertex,1);
-    %         CompM_Vertex_width = size(CompM_Vertex,1);
-    %         VertexC_len = size(VertexC,1);
-    % 
-    %         if all([~isempty(CompM_Edge),~isempty(EdgeC),CompM_Edge_width == 2,CompM_Edge_len==EdgeC_len])
-    %             % Valid Edge Connection 
-    %             % Verify Class Types
-    %             for i = 1:CompM_Edge_len
-    %                 for j = 1:2
-    %                     if isa(CompM_Edge(i,j),"gmt_Graph")
-    %                         error("Not all components being combined are of class gmt_Graph")
-    %                         break;
-    %                     end   
-    %                 end
-    %             end
-    % 
-    %         elseif all([~isempty(CompM_Vertex),~isempty(VertexC),CompM_Vertex_width == 2,CompM_Vertex_len==VertexC_len])
-    %             % Valid Vertex Connection 
-    %             % Verify Class Types
-    %             for i = 1:CompM_Vertex_len
-    %                 for j = 1:2
-    %                     if isa(CompM_Vertex(i,j),"gmt_Graph")
-    %                         error("Not all components being combined are of class gmt_Graph")
-    %                         break;
-    %                     end
-    % 
-    %                 end
-    %             end
-    %         end
-    % 
-    % 
-    %         % Verify The Inputs Are gmt_Graph
-    % 
-    %         % Compute Each Matrix Sizes  
-    %         A = CompM_Edge(i,1).Properties.M;
-    %         B = CompM_Edge(j,1).Properties.M;
-    % 
-    %         sz_A_r = size(A,1);
-    %         sz_A_c = size(A,2);
-    %         sz_B_r = size(B,1);
-    %         sz_B_c = size(B,2);
-    %         sz_C_r = sz_A_r + sz_B_r;
-    %         sz_C_c = sz_A_c + sz_B_c - 1;
-    % 
-    %         % Create New Matrix of Zeros 
-    %         C = zeros(sz_C_r,sz_C_c);
-    % 
-    %         idx = 1;
-    % 
-    %         close all
-    %         % Search Each Edge Combination in A and B 
-    %         for k = 1:sz_A_c
-    %             for l = 1:sz_B_c
-    % 
-    %                 % Creat Combination Vector
-    %                 cm_c = [k, l];
-    % 
-    %                 % Rearrange Columns of A
-    %                 A_c_tmp = 1:1:sz_A_c;
-    %                 A_c_tmp(:,cm_c(1)) = [];
-    %                 A_tmp = [A(:,A_c_tmp),A(:,cm_c(1))];
-    %                 % 
-    %                 % [G, Nv, Ne] = gmtbGraph(A_tmp);
-    %                 % figure
-    %                 % plot(G,'Layout','force')
-    %                 % 
-    %                 % Rearrange Columns of B
-    %                 B_c_tmp = 1:1:sz_B_c;
-    %                 B_c_tmp(:,cm_c(2)) = [];
-    %                 B_tmp = [B(:,cm_c(2)), B(:,B_c_tmp)];
-    % 
-    %                 % [G, Nv, Ne] = gmtbGraph(B_tmp);
-    %                 % figure
-    %                 % plot(G,'Layout','force')
-    % 
-    %                 D(1:sz_A_r,1:sz_A_c) = A_tmp;
-    %                 D(sz_A_r+1:sz_C_r,sz_A_c:sz_C_c) = B_tmp;
-    % 
-    %                 % Determine Non-Zero Rows at Edge Connection for Each Matrix
-    %                 % This limits the search space as these are the only possible vertices to remove
-    %                 % One vertice must be removed from A and one vertice must be removed from B 
-    %                 nz_v_a = find(A_tmp(:,sz_A_c)); % Number of Non-Zero Vertices at Edge Connection in Matrix A
-    %                 nz_v_b = find(B_tmp(:,1)); % Number of Non-Zero Vertices at Edge Connection in Matrix B
-    % 
-    %                 % Search Non-Zero Vertices at Edge Connection in Matrix A
-    %                 for i = 1:length(nz_v_a)
-    %                     % Search Non-Zero Vertices at Edge Connection in Matrix B
-    %                     for j = 1:length(nz_v_b)
-    %                         % Compute rows to remove 
-    %                         va_r = nz_v_a(i); 
-    %                         vb_r = nz_v_b(j) + sz_A_r; % Offset based on matrix A position 
-    %                         % Assign temporary matrix 
-    %                         C_tmp = D;
-    %                         % Remove rows 
-    %                         % C_tmp([va_r, vb_r],:) = [];
-    %                         % Compute Laplacian 
-    %                         Lap_tmp = C_tmp*C_tmp';
-    %                         % Compute Laplacian Eigenvalues
-    %                         Lap_eig_tmp = eig(Lap_tmp,"nobalance");
-    %                         % Compute Zero Eigenvalue Multiplicity 
-    %                         zero_eig_mult = sum(find(Lap_eig_tmp < eps('single')));
-    %                         % If a connected graph store the pairs 
-    %                         % if all([zero_eig_mult == 1, sum(sum(Lap_tmp, 1)) == 0, sum(sum(Lap_tmp,2)) == 0])
-    %                             [G, Nv, Ne] = gmtbGraph(C_tmp);
-    %                             valid_ec(idx,:) = [size(C_tmp,1), size(C_tmp,2), Nv, Ne, det(C_tmp*C_tmp'), zero_eig_mult, size(C_tmp*C_tmp',2)-rank(C_tmp*C_tmp'), k, l, va_r, vb_r, sum(sum(C_tmp, 1)), sum(sum(C_tmp,2)), sum(sum(C_tmp*C_tmp',1)), sum(sum(C_tmp*C_tmp',2)), max(sum(C_tmp*C_tmp',1)), max(sum(C_tmp*C_tmp',2)), min(sum(C_tmp*C_tmp',1)), min(sum(C_tmp*C_tmp',2)),Lap_eig_tmp'];
-    %                             figure('Visible', 'off');
-    %                             plot(G,'Layout','force')
-    %                             fileName = strcat('GraphCombination_',string(datetime('today', 'Format', 'MMddyyyy')),'_Test_Num_',num2str(idx),'.png');
-    %                             saveas(gcf,fileName)
-    %                             close all
-    %                             idx = idx + 1;
-    %                         % end
-    %                     end
-    %                 end
-    %             end
-    %         end
-    %     end
-    % end
 end

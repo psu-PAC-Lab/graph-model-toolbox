@@ -12,10 +12,7 @@ classdef gmt_RecipEngineModel < gmt_Graph
     methods
 
         %% Constructor Method
-        function obj = gmt_RecipEngineModel(ObjectName,varagin)
-
-            % Default input validation check, move to template
-            assert(nargin<=2,"Error number of inputs is more than 2, check number of inputs specified")
+        function obj = gmt_RecipEngineModel(ObjectName,varargin)
 
             % Define Vertices (% Divided by zero)
             Vertices(1) = gmt_Vertex("Tank Mass","Qhv*x_dot");
@@ -45,15 +42,14 @@ classdef gmt_RecipEngineModel < gmt_Graph
             % State x1 and x2 
             Param(1) = gmt_ModelParameter("Heating Value","Qhv",46e6,[]);
             Param(2) = gmt_ModelParameter("Rotational Inertia","J",25,[]);
-            Param(3) = gmt_ModelParameter("Efficiency Loss to Cooling","Nth_c",0.40,[]);
-            Param(4) = gmt_ModelParameter("Efficiency Loss to Ambient","Nth_a",0.25,[]);
+            Param(3) = gmt_ModelParameter("Efficiency Loss to Ambient","Nth_a",0.25,[]);
             
             Data.xd = linspace(1,1000,10);
             Data.yd = rand(1,10);
-            Param(5) = gmt_ModelParameter("Theraml Efficency","interp1(xd,yd,xt)",Data,[]);
+            Param(4) = gmt_ModelParameter("Theraml Efficency","interp1(xd,yd,xt)",Data,[]);
 
             % Creates an unparameterized componentn object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,varargin{:});
 
             % Define Connection Ports 
             obj.Ports(1) = gmt_ConnectionPort(obj,"VertexConnection",2,"Mechanical");

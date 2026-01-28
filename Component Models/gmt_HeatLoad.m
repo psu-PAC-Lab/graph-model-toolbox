@@ -10,13 +10,13 @@ classdef gmt_HeatLoad < gmt_Graph
 
     methods
         %% Constructor Method
-        function obj = gmt_HeatLoad(ObjectName)
+        function obj = gmt_HeatLoad(ObjectName,varargin)
 
             % Define Vertices 
-            Vertices(1) = gmt_Vertex("Load Temperature","x_dot");
+            Vertices(1) = gmt_Vertex("Load Temperature","cp_f*V*Rho*x_dot");
             Vertices(2) = gmt_Vertex("Inlet","x_dot","External");
             Vertices(3) = gmt_Vertex("Outlet","x_dot","External");
-            Vertices(4) = gmt_Vertex("Energy Applied","x_dot","External");
+            Vertices(4) = gmt_Vertex("Energy Applied","1","External");
 
             % Define Edges 
             Edges(1) = gmt_Edge("Advection In","cp_f*u1*xt");
@@ -29,15 +29,17 @@ classdef gmt_HeatLoad < gmt_Graph
                           4 1];
 
             % Define Default Model Parameterization 
-            Param(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",1,[]);
+            Param(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);
+            Param(2) = gmt_ModelParameter("Volume","V",0.002,[]);
+            Param(3) = gmt_ModelParameter("Fluid Density","Rho",1090,[]);
 
             % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,"Component");
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,varargin{:});
 
             % Define Available Connection Ports
             obj.Ports(1) = gmt_ConnectionPort(obj,"EdgeConnection",1,"Thermal");
             obj.Ports(2) = gmt_ConnectionPort(obj,"EdgeConnection",2,"Thermal");
-
+            obj.Ports(3) = gmt_ConnectionPort(obj,"VertexConnection",1,"Thermal");
         end
     end
 end

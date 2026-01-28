@@ -5,7 +5,7 @@
 %% Class Defintion
 classdef gmt_ConnectionPort
     
-    properties (SetAccess = protected)
+    properties
         PortType (1,1) gmt_PortType = gmt_PortType.EdgeConnection % Interconnection Types: Type 1 for edge connections and Type 2 for vertex connections
         ElementNumber (:,1) % Stores the edge or vertex number for connection 
         EnergyDomain (1,1) gmt_EnergyDomain = gmt_EnergyDomain.Unassigned % Port Energy Domain
@@ -67,6 +67,13 @@ classdef gmt_ConnectionPort
            elseif nargin > 5
                error("Number of variable input arguments exceed allowable length of one. Check number of variable input arguments.")
            end
+
+           if obj.PortType == gmt_PortType.EdgeConnection
+                obj.Description = ParentObj.Edges(obj.ElementNumber).EdgeName;
+           else
+               obj.Description = ParentObj.Vertices(obj.ElementNumber).VertexName;
+           end
+
         end
     end
 end
