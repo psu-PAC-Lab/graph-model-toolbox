@@ -11,6 +11,7 @@ classdef gmt_Graph
         Properties gmt_GraphProperties % Object containing overall graph properties
         DiGraph % MATLAB native directed graph object
         Inputs string = [] % String array of system input variable names
+        InputData gmt_Input % Input objects to replace inputs in future
         States string % String array of system state variable names
         Outputs string = [] % String array of system output variable names
         %Disturbances string = [] % String array of system disturbance variable names
@@ -24,14 +25,26 @@ classdef gmt_Graph
     %% Public Methods 
     methods (Access = public)
         %% Constructor Graph 
-        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters,varargin)
+        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin)
             % Generates instance of gmt_Graph object
             % Assign Data
             obj.Name = Name;
             obj.EdgeMatrix = EdgeMatrix;
             obj.Edges = Edges;
             obj.Vertices = Vertices;
-            obj.ModelParameters = Parameters;
+
+            % Possibly set this up for varargin 
+            if ~isempty(Parameters) 
+                obj.ModelParameters = Parameters;
+            end
+
+            % Possibly set this up for varargin 
+            if ~isempty(Inputs)
+                obj.InputData = Inputs;
+                for i = 1:length(obj.InputData)
+                    obj.InputData(i) = obj.InputData(i).gmt_GraphInput(obj,[obj.InputData(i).VariableName],varargin{:});
+                end
+            end
 
             % Compute Basic Graph Properties (Nv, Ne, and M) 
             obj.Properties = gmt_GraphProperties(obj);
@@ -47,7 +60,7 @@ classdef gmt_Graph
         % Generates then displays vertex and edge report of entire model
         function gmt_GraphReport(obj)
             % Vertex Table
-            varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","Capacitance","Capacitance Equation","Power Equation"];
+            varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","Inputs","Capacitance","Capacitance Equation","Power Equation"];
             for idx_tmp = 1:length(varNames_tmp)
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
@@ -62,15 +75,20 @@ classdef gmt_Graph
                 else
                     table_tmp(i,3) = {obj.Vertices(i).GraphStateVariables};
                 end
-                table_tmp(i,4) = {obj.Vertices(i).GraphCapacitance};
-                table_tmp(i,5) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
-                table_tmp(i,6) = {str2sym(obj.Vertices(i).GraphPowerEq)};
+                if isempty(obj.Vertices(i).InputVariables)
+                    table_tmp(i,4) = {""};
+                else
+                    table_tmp(i,4) = {join([obj.Vertices(i).InputVariables],", ")};
+                end
+                table_tmp(i,5) = {obj.Vertices(i).GraphCapacitance};
+                table_tmp(i,6) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
+                table_tmp(i,7) = {str2sym(obj.Vertices(i).GraphPowerEq)};
             end
 
             fprintf('\n'); disp(table_tmp) 
 
             % Edge Table
-            varNames2_tmp = ["Edge Name","Edge Type","Edge Equation"];
+            varNames2_tmp = ["Edge Name","Edge Type","Inputs","Edge Equation"];
             for idx2_tmp = 1:length(varNames2_tmp)
                 varTypes2_tmp(1,idx2_tmp) = {'string'};
             end
@@ -80,7 +98,13 @@ classdef gmt_Graph
             for i = 1:obj.Properties.Ne
                 table2_tmp(i,1) = {obj.Edges(i).EdgeName};
                 table2_tmp(i,2) = {obj.Edges(i).EdgeType};
-                table2_tmp(i,3) = {str2sym(obj.Edges(i).GraphEdgeEq)};   
+                if isempty(obj.Edges(i).InputVariables)
+                    table2_tmp(i,3) = {""};
+                else
+                    table2_tmp(i,3) = {join([obj.Edges(i).InputVariables],", ")};
+                end
+
+                table2_tmp(i,4) = {str2sym(obj.Edges(i).GraphEdgeEq)};   
             end
 
             fprintf('\n'); disp(table2_tmp) 
@@ -108,7 +132,7 @@ classdef gmt_Graph
         end
 
         %% Connection Report  
-        % Searches the possible connection for graph object
+        % Returns the port connection data in easy to read format
         function gmt_ConnectionReport(obj)
             num_params = length(obj.Ports);
             varNames_tmp = ["Description","PortType", "Element Number"];
@@ -127,8 +151,38 @@ classdef gmt_Graph
 
         end
 
-        % 
-        % end
+        %% Input Report  
+        % Returns the port connection data in easy to read format
+        function gmt_InputReport(obj)
+            num_params = length(obj.InputData);
+            varNames_tmp = ["Variable","Description"];
+            for idx_tmp = 1:length(varNames_tmp)
+                varTypes_tmp(1,idx_tmp) = {'string'};
+            end
+            sz = [num_params length(varNames_tmp)];
+            table_tmp = table('Size',sz,'VariableTypes',varTypes_tmp,'VariableNames',varNames_tmp);
+            for i = 1:num_params
+                table_tmp(i,1) = {obj.InputData(i).GraphVariableName};
+                table_tmp(i,2) = {obj.InputData(i).GraphDescription};
+            end
+
+            fprintf('\n'); disp(table_tmp) 
+
+        end
+
+        %% Full Report 
+        % Generates all reports 
+        function gmt_FullReport(obj)
+
+            fprintf('\n<strong>Graph Report</strong>\n');
+            gmt_GraphReport(obj)
+            fprintf('<strong>Parameter Report</strong>\n');
+            gmt_ParameterReport(obj)
+            fprintf('<strong>Input Report</strong>\n');
+            gmt_InputReport(obj)
+
+        end
+
         %% DiGraphUpdate
         function obj = gmt_DiGraphUpdate(obj)
 
@@ -215,11 +269,14 @@ classdef gmt_Graph
         % Once all vertices, edges, and edge matrix has been defined a model can be generated 
         function obj = gmt_ModelUpdate(obj,varargin)
 
+            % Varagin Input Argument Parsing 
             p = inputParser;
             p.KeepUnmatched = true;
             addParameter(p, 'BuildModel', false, @(x) islogical(x) && isscalar(x));
             addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'CombineInputs', [], @(s) isstring(s) && size(s,2) == 2);
             parse(p, varargin{:});
+            CombineInputs = p.Results.CombineInputs;
             makeFunc_mfile  = p.Results.BuildModel;
             componentMdl = ~p.Results.SystemModel;
 
@@ -401,6 +458,10 @@ classdef gmt_Graph
                 end
             end
 
+            [Akeep, ia, ib] = intersect([obj.Inputs],[obj.InputData.GraphVariableName], 'stable');
+            InputData_Match_tmp = ismember([obj.InputData.GraphVariableName],Akeep);
+            obj.InputData = obj.InputData(InputData_Match_tmp);
+
             %% Create System Model in M File          
             if makeFunc_mfile 
 
@@ -544,6 +605,48 @@ classdef gmt_Graph
 
         end
         
+        %% Input Commonization 
+        function obj = gmt_InputCommon(obj,varargin)
+
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, 'BuildModel', false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'CombineInputs', [], @(s) isstring(s) && size(s,2) == 2);
+            parse(p, varargin{:});
+            CombineInputs = p.Results.CombineInputs;
+            makeFunc_mfile  = p.Results.BuildModel;
+            componentMdl = ~p.Results.SystemModel;
+    
+            for i = 1:length(obj.Edges)  
+                EdgeEq_tmp(i) = replace(obj.Edges(i).EdgeEq,CombineInputs(:,1),CombineInputs(:,2));
+                
+                if obj.Edges(i).EdgeType == gmt_EdgeType.External
+                    Edge_Updated(i) = gmt_Edge(obj.Edges(i).EdgeName,EdgeEq_tmp(i),string(obj.Edges(i).EdgeType));
+                else
+                    Edge_Updated(i) = gmt_Edge(obj.Edges(i).EdgeName,EdgeEq_tmp(i));
+                end
+    
+            end
+    
+            for j = 1:length(obj.Vertices)  
+                VerticesCapacitanceEq_tmp(j) = replace(obj.Vertices(j).CapacitanceEq,CombineInputs(:,2),CombineInputs(:,1));
+    
+                if obj.Vertices(j).VertexType == gmt_VertexType.External
+                    Vertex_Updated(j) = gmt_Vertex(obj.Vertices(j).VertexName,VerticesCapacitanceEq_tmp(j),string(obj.Vertices(j).VertexType));
+                else
+                    Vertex_Updated(j) = gmt_Vertex(obj.Vertices(j).VertexName,VerticesCapacitanceEq_tmp(j));
+                end
+    
+            end
+    
+            obj.Edges = Edge_Updated;
+            obj.Vertices = Vertex_Updated;
+
+            obj = gmt_Graph(obj.Name,obj.EdgeMatrix,obj.Edges,obj.Vertices,obj.ModelParameters,obj.InputData,varargin{:});
+
+        end
+
     end
     %% Static Public Methods
     methods (Static)
@@ -689,6 +792,10 @@ classdef gmt_Graph
                     objB_tmp.Vertices(j).CapacitanceEq = replace(objB_tmp.Vertices(j).CapacitanceEq,AllInputsB,NewInputsB);
                 end
 
+                for k = 1:length(objB_tmp.InputData)
+                    objB_tmp.InputData(k).VariableName = replace(objB_tmp.InputData(k).VariableName,AllInputsB,NewInputsB);
+                end
+
                 % Edge Input Commonization 
                 NewInputsEdgeBNum = double(extractAfter(EdgeB_inputs, "u")) + TotNumInputsA;
                 NewInputsEdgeB_rep = "u" + string(NewInputsEdgeBNum);
@@ -725,6 +832,7 @@ classdef gmt_Graph
                 % Join the edges and vertex arrays together less the remove or common elements 
                 VerticesNew = [objA_tmp.Vertices(M_a_vidx),objB_tmp.Vertices(M_b_vidx)];
                 EdgeNew = [objA_tmp.Edges,objB_tmp.Edges(M_b_eidx)];
+                InputsNew = [objA_tmp.InputData,objB_tmp.InputData];
 
                 % Update Vertex Objects
                 for i = 1:length(VerticesNew)
@@ -742,6 +850,10 @@ classdef gmt_Graph
                     else
                         EdgeUpdated(j) = gmt_Edge(EdgeNew(j).EdgeName,EdgeNew(j).EdgeEq);
                     end
+                end
+
+                for k = 1:length(InputsNew)
+                        InputsUpdated(k) = gmt_Input(InputsNew(k).VariableName,InputsNew(k).GraphDescription);
                 end
 
                 %% Construct New Edge Matrix from Incidence
@@ -829,7 +941,7 @@ classdef gmt_Graph
 
 
             %% BuildGraphModel 
-            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,varargin{:});
+            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,InputsUpdated,varargin{:});
             %% Create New Port Objects
             for i = 1:length(Ports_tmp)
                 objC.Ports(i) = gmt_ConnectionPort(objC,string(Ports_tmp(i).PortType),Ports_tmp(i).ElementNumber,string(Ports_tmp(i).EnergyDomain));
@@ -996,7 +1108,7 @@ classdef gmt_Graph
             PortsA_idx_keep = setdiff(Ports_idx,[Connection(1);Connection(2)]);
             PortsA = obj.Ports(PortsA_idx_keep);
 
-            obj_tmp = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,varargin{:});  
+            obj_tmp = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,obj.InputData,varargin{:});  
             obj_tmp.Ports = [PortsA(:)]';
             obj = obj_tmp;
 

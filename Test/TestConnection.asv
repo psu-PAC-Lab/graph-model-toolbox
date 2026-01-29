@@ -1,16 +1,15 @@
 %% Dual Tank Doman Model 
-clear all
+clear all; close all; clc
 
 tic
 % System Component Creation 
 HeatLoad = gmt_HeatLoad("HeatLoad");
 CoolerLoad = gmt_HeatLoad("CoolerLoad");
-Split = gmt_HeatLoad("Split");
 MainTank = gmt_Tank2("MainTank");
 RecirTank = gmt_Tank("RecirTank");
 EngineSplit = gmt_SplitJunction2("EngineSplit");
 TankSplit = gmt_SplitJunction3("TankSplit");
-toc
+
 
 % Graph Combination 
 % Combined input pairs 
@@ -23,24 +22,33 @@ SubSysD = gmt_Graph.gmt_CombineSimple(SubSysC,EngineSplit,[6, 2],"SystemModel",t
 SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[6, 2],"SystemModel",true);
 SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 7],"BuildModel",true,"SystemModel",true);
 
+InputMatching = ...
+["u2","u1"; ...
+"u5","u3"; ...
+"u6","u4"; ...
+"u8", "(u1+u3)"; ...
+"u9","u4"];
+
+SysFin = SysFin.gmt_InputCommon("CombineInputs",InputMatching,"BuildModel",true,"SystemModel",true);
+SysFin.gmt_GraphPlot
+S
+toc
+
 % SubSysB = gmt_Graph.gmt_CombineSimple(CoolerLoad,RecirTank,[2, 1],"SystemModel",true);
 % SubSysC = gmt_Graph.gmt_CombineSimple(SubSysA,EngineSplit,[4, 1],"SystemModel",true);
 % Sys = gmt_Graph.gmt_CombineSimple(SubSysC,SubSysB,[4, 1],"SystemModel",true);
 
 %SysFin = gmt_Graph.gmt_CombineSys(Sys,[8, 3],"BuildModel",true,"SystemModel",true);
-toc
+
 
 %% Status Note Log 
 % Doman Dual Tank Requires Vertex Connection 
 % Capacitance equation does not handle states numbering during connection
-% Mass conservation getting in the way 
-% Parameters with same variable name are treated as common 
+% Parameters with same variable name are treated as common, no updating on combination  
 % Incidence matrix is correct, question is how to integrate the model inputs. 
-% Sometimes inputs are mass flow rates which require mass conservation and need to be treated uniquely ...
-% from cases where the 
 
 %% Improvement Log
-% Problem with parameter commonization 
+% Problem with parameter commonization Sys
 % Improve Options Architecture Using Varagin
     % Graph Based Modeling Simple or System Connection Option 
     %   Opts("BuildModel",'True',"PlotModel","True","CommonInputs",["u1", "u2"],)

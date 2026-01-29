@@ -27,12 +27,16 @@ classdef gmt_SplitJunction3 < gmt_Graph
                           1 4];
 
             % Define Default Model Parameterization 
-            Param(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);
-            Param(2) = gmt_ModelParameter("Volume","V",0.002,[]);
-            Param(3) = gmt_ModelParameter("Fluid Density","Rho",1090,[]);
+            Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);
+            Parameters(2) = gmt_ModelParameter("Volume","V",0.002,[]);
+            Parameters(3) = gmt_ModelParameter("Fluid Density","Rho",1090,[]);
+
+            % Define Input Labeling 
+            Inputs(1) = gmt_Input("u1","Inlet Mass Flow 1");
+            Inputs(2) = gmt_Input("u2","Inlet Mass Flow 2");
 
             % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,varargin{:})
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin{:})
 
             % Define Available Connection Ports
             for i = 1:length(Edges)

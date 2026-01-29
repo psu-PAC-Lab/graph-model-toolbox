@@ -2,9 +2,11 @@ classdef gmt_GraphProperties
 
     properties
         M double % Incident Matrix 
+        L double % Oriented Laplacian Matrix 
+        Lev double % Oriented Laplacian Eigenvalues
+        Nc double % Number of independent graphs 
         Nv double % Number of vertices 
         Ne double % Number of edges
-        % NvB double % Number of Boundary Vertices, Obsolete 
         Ns double % Number of States
         NsD double % Number of dynamic states
         NsA double % Number of algebraic states
@@ -35,6 +37,15 @@ classdef gmt_GraphProperties
 
             % Update Incidence Matrix 
             obj.M = tmp;
+
+            % Update Laplacian Matrix
+            obj.L = tmp*tmp';
+
+            % Update Independent Graph Count
+            obj.Nc = size(obj.L,1) - rank(obj.L);
+
+            % Laplacian Eigenvalues 
+            obj.Lev = eig(obj.L);
 
             % Compute Graph Validity 
             obj.GraphValidity = gmt_GraphValidity(obj_in,obj);
