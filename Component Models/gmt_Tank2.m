@@ -20,16 +20,19 @@ classdef gmt_Tank2 < gmt_Graph
             Vertices(3) = gmt_Vertex("Tank Fill Inlet","1");
             Vertices(4) = gmt_Vertex("Inlet Temperature","cp_f*V*Rho*x_dot","External");
             Vertices(5) = gmt_Vertex("Outlet Temperature","cp_f*V*Rho*x_dot","External");
+            Vertices(6) = gmt_Vertex("Outlet Temperature","cp_f*V*Rho*x_dot","External");
 
             % Define Edges 
             Edges(1) = gmt_Edge("Advection In","cp_f*u1*xh");
             Edges(2) = gmt_Edge("Advection Out","cp_f*u1*xt");
             Edges(3) = gmt_Edge("Tank Fill Rate","(-u1)");
+            Edges(4) = gmt_Edge("Advection Tank","cp_f*(u1-u1)*xt");
 
             % Define Edge Matrix
             EdgeMatrix = [4 1; ...
                           1 5; ...
-                          3 2];
+                          3 2; ...
+                          1 6];
 
             % Define Default Model Parameterization 
             Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);

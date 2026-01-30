@@ -25,14 +25,14 @@ classdef gmt_Tank < gmt_Graph
             % Define Edges 
             Edges(1) = gmt_Edge("Advection In","cp_f*u1*xt");
             Edges(2) = gmt_Edge("Advection Out","cp_f*u2*xt");
-            Edges(3) = gmt_Edge("Advection Tank","cp_f*(u1-u2)*xt");
-            Edges(4) = gmt_Edge("Tank Fill Rate","(u1-u2)");
+            Edges(3) = gmt_Edge("Tank Fill Rate","(u1-u2)");
+            Edges(4) = gmt_Edge("Advection Tank","cp_f*(u1-u2)*xt");
 
             % Define Edge Matrix
             EdgeMatrix = [4 1; ...
                           1 5; ...
-                          1 6; ...
-                          3 2];
+                          3 2; ...
+                          1 6];
 
             % Define Default Model Parameterization 
             Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);

@@ -180,6 +180,8 @@ classdef gmt_Graph
             gmt_ParameterReport(obj)
             fprintf('<strong>Input Report</strong>\n');
             gmt_InputReport(obj)
+            fprintf('<strong>Connection Port Report</strong>\n');
+            gmt_ConnectionReport(obj)
 
         end
 
@@ -658,7 +660,7 @@ classdef gmt_Graph
             % Data Validation 
             PortA_tmp = objA.Ports(Connection(1)).PortType;
             PortB_tmp = objB.Ports(Connection(2)).PortType;
-            assert(PortA_tmp==PortB_tmp,"Connection Type Does Not Match") 
+            assert(PortA_tmp == PortB_tmp,"Connection Type Does Not Match") 
 
             % Component Incidence Matrices 
             M_a = objA.Properties.M;

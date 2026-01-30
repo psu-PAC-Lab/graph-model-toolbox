@@ -2,15 +2,15 @@ figure
 SysFin.gmt_PlotGraph 
 
 u1 = 1.5; % MainTank: Outlet Mass Flow 1
-u3 = 0.5; % RecirTank: Oulet Mass Flow 
-u4 = 0.5; % RecirTank: Inlet Mass Flow
+u3 = 1.5; % RecirTank: Oulet Mass Flow 
+u4 = 1.5; % RecirTank: Inlet Mass Flow
 u7 = 0; %CoolerLoad: Energy Applied
 u11 = 60000; % "HeatLoad: Energy Applied" 
 
-SimTEnd = 10000;
+SimTEnd = 1000;
 
 OdeOpts = odeset('Mass', SysFin.ModelMetadata.MassMatrix, 'MassSingular', 'yes');
-y0 = [300, 6000, 300, 300, 300, 1500, 300, 300, 300, 300, 300, 1 ,1, 1]; 
+y0 = [300, 6000, 300, 300, 300, 300, 1500, 300, 300, 300, 300, 1 ,1, 1, 1, 1]; 
 tic
 [t, y] = ode23t(@(t,y) sysFun_Combine(t,y,u1,u3,u4,u7,u11), [0 SimTEnd], y0 ,OdeOpts);
 tend = toc;

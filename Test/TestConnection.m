@@ -15,8 +15,8 @@ SubSysA = gmt_Graph.gmt_CombineSimple(MainTank,TankSplit,[2, 1],"SystemModel",tr
 SubSysB = gmt_Graph.gmt_CombineSimple(SubSysA,RecirTank,[4, 2],"SystemModel",true);
 SubSysC = gmt_Graph.gmt_CombineSimple(SubSysB,CoolerLoad,[5, 2],"SystemModel",true);
 SubSysD = gmt_Graph.gmt_CombineSimple(SubSysC,EngineSplit,[6, 2],"SystemModel",true);
-SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[6, 2],"SystemModel",true);
-SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 7],"SystemModel",true);
+SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[7, 2],"SystemModel",true);
+SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 8],"SystemModel",true);
 
 % Match Inputs 
 % Ask Chris and Phil about automatic to join inputs
