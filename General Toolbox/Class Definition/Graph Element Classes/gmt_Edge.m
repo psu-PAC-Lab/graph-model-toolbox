@@ -227,14 +227,14 @@ methods
         function obj = gmt_UpdateGraphHeadStateVar(obj,GraphHeadStateVar_tmp)
             obj.GraphHeadStateVariables = GraphHeadStateVar_tmp;
             GraphEdgeEq_tmp = obj.GraphEdgeEq;
-            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.HeadStateVariables, obj.GraphHeadStateVariables);
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, "xh", obj.GraphHeadStateVariables);
         end
 
         %% Update Graph Specific Tail State Variables 
         function obj = gmt_UpdateGraphTailStateVar(obj,GraphTailStateVar_tmp)
             obj.GraphTailStateVariables = GraphTailStateVar_tmp;
             GraphEdgeEq_tmp = obj.GraphEdgeEq;
-            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, obj.TailStateVariables, obj.GraphTailStateVariables);
+            obj.GraphEdgeEq = regexprep(GraphEdgeEq_tmp, "xt", obj.GraphTailStateVariables);
         end
 
     end

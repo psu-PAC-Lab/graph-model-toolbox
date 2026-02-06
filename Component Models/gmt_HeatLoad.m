@@ -14,9 +14,9 @@ classdef gmt_HeatLoad < gmt_Graph
 
             % Define Vertices 
             Vertices(1) = gmt_Vertex("Load Temperature","cp_f*V*Rho*x_dot");
-            Vertices(2) = gmt_Vertex("Inlet","x_dot","External");
-            Vertices(3) = gmt_Vertex("Outlet","x_dot","External");
-            Vertices(4) = gmt_Vertex("Energy Applied","1","External");
+            Vertices(2) = gmt_Vertex("Inlet","cp_f*Rho*V*x_dot","External");
+            Vertices(3) = gmt_Vertex("Outlet","cp_f*Rho*V*x_dot","External");
+            Vertices(4) = gmt_Vertex("Energy Applied","x_dot","External");
 
             % Define Edges 
             Edges(1) = gmt_Edge("Advection In","cp_f*u1*xt");
@@ -29,13 +29,13 @@ classdef gmt_HeatLoad < gmt_Graph
                           4 1];
 
             % Define Default Model Parameterization 
-            Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,[]);
-            Parameters(2) = gmt_ModelParameter("Volume","V",0.002,[]);
-            Parameters(3) = gmt_ModelParameter("Fluid Density","Rho",1090,[]);
+            Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
+            Parameters(2) = gmt_ModelParameter("Volume","V",0.002,"Units","m^3");
+            Parameters(3) = gmt_ModelParameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
 
             % Define Input Labeling 
-            Inputs(1) = gmt_Input("u1","Inlet Mass Flow 1");
-            Inputs(2) = gmt_Input("u2","Energy Applied");
+            Inputs(1) = gmt_Input("u1","Inlet Mass Flow 1","Units","kg/s");
+            Inputs(2) = gmt_Input("u2","Energy Applied","Units","W");
 
             % Creates an Motor Object 
             obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin{:});

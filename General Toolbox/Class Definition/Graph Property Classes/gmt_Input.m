@@ -8,6 +8,9 @@ classdef gmt_Input
     properties
         VariableName string
         Description string 
+        Dependency 
+        DependencyFormula
+        Units 
     end
 
     properties (GetAccess = public, SetAccess = private)
@@ -18,9 +21,27 @@ classdef gmt_Input
     methods
         
         %% Constructor Method
-        function obj = gmt_Input(VariableName,Description)
+        function obj = gmt_Input(VariableName,Description,varargin)
+
+            % Input Parsing
+            p = inputParser;
+            addParameter(p, 'DependencyFormula',[], @(x) isstring(x));
+            addParameter(p, 'Units',[], @(x) isstring(x));
+            parse(p, varargin{:});
+
+            % Required User Properties 
             obj.VariableName = VariableName;
             obj.Description = Description;
+
+            % Optional User Properties
+            if ~isempty(p.Results.Units)
+                obj.Units = p.Results.Units;
+            end
+
+            if ~isempty(p.Results.DependencyFormula)
+                obj.DependencyFormula = p.Results.DependencyFormula;
+            end
+
         end
 
         %% Graph Date Update

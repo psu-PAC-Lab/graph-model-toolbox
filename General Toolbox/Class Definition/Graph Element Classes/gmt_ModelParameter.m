@@ -6,11 +6,15 @@ classdef gmt_ModelParameter
     properties
         Description string
         Variable string
+        Common logical = false
+        Optimization logical = false
+        Units string
         Data 
     end
 
     properties (SetAccess = protected) 
         ParameterType gmt_ParameterType
+        Parent string
         lookupVars string
         lookupDim 
         TableOpts 
@@ -20,14 +24,31 @@ classdef gmt_ModelParameter
     methods
     
         %% Constructor Method (User Defined and Internal Meta Data Update) 
-        function obj = gmt_ModelParameter(Description,Variable,Data,Opts)
+        function obj = gmt_ModelParameter(Description,Variable,Data,varargin)
 
-            % Validate Inputs 
+            % Input Parsing
+            p = inputParser;
+            addParameter(p, 'Optimization',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'Common',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'Units',[], @(x) isstring(x));
+            parse(p, varargin{:});
 
-            % Determine Parameter Type 
+            % Required User Properties 
             obj.Description = Description;
-            
             obj.Variable = Variable;
+
+            % Optional User Properties
+            if ~isempty(p.Results.Units)
+                obj.Units = p.Results.Units;
+            end
+
+            if ~isempty(p.Results.Common)
+                obj.Common = p.Results.Common;
+            end
+
+            if ~isempty(p.Results.Optimization)
+                obj.Optimization = p.Results.Optimization;
+            end
 
             % Determine Parameter Type
             switch true 
@@ -66,6 +87,11 @@ classdef gmt_ModelParameter
 
             end
                           
+        end
+
+        %% Update Model Parameter Parent Name
+        function obj = gmt_ModelParameterParent(obj,GraphName)
+            obj.Parent = GraphName;    
         end
 
     end

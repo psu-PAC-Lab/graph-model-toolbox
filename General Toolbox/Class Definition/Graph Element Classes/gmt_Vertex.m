@@ -18,26 +18,27 @@ classdef gmt_Vertex
     properties (SetAccess = protected)
         %  Internal Meta Data - Auto-Generated based vertex object, runs during constructor method i.e. only an vertex object must be defined to define these variables 
         StateType string % Internally specified state type based on user define capitance equation formulation
-        NvSa (1,1) double % Number of independent algebraic states within vertex  
-        NvSd (1,1) double % Number of independent dynamic state within vertex 
-        NvS (1,1) double % Total number of independent states within vertex 
-        NvU (1,1) double % Number of control inputs within vertex
-        NvY (1,1) double % Number of outputs within vertex
+        NvSa (1,1) double = 0 % Number of independent algebraic states within vertex  
+        NvSd (1,1) double = 0 % Number of independent dynamic state within vertex 
+        NvS (1,1) double = 0 % Total number of independent states within vertex 
+        NvU (1,1) double = 0 % Number of control inputs within vertex
+        NvY (1,1) double = 0 % Number of outputs within vertex
         Capacitance string = []% Internally computed capacitance based on user defined capacitance equation
+        ComponentStateVariable string = [] % List of algebraic state variables defiend in capacitance equation that are part of the graph but are user defined
         StateVariables string = [] % List of algebraic and dynamic state variables defiend in capacitance equation 
-        StateGraphVariables string = [] % List of algebraic state variables defiend in capacitance equation that are part of the graph but are user defined
         StateDerVariables string = [] % List of dynamic state variables defined in capacitance equation 
         InputVariables string = [] % List of input variables defined in capacitance equation
         OutputVariables string = [] % List of output variables defined in capacitance equation 
         ParameterVariables string = [] % List of parameter variables defined in capacitance equation 
-        % External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables  
+        % External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables
+        GraphDisturbanceType string = "unassigned" % Auto-generated based incidence matrix;
         GraphStateVariables string = [] % Auto-generated list of state variables based on graph model
         GraphStateDerVariables string = [] % Auto-generated list of state derivative variables based on graph model
         GraphOutputVariables string = [] % Auto-generated list of output variables based on graph model
         GraphCapacitanceEq string = [] % Auto-generated graph specific capacitance equation 
         GraphCapacitance string = [] % Auto-generated graph specific capacitance equation 
         GraphPowerEq string % Auto-generated graph specific power equation 
-        GraphNvE % Auto-generated number of edges connected to vertex
+        GraphNvE % Auto-generated number of edges connected to verte
         GraphVertexEq string % Auto-generated graph specific vertex equation 
     end
 
@@ -88,6 +89,7 @@ classdef gmt_Vertex
                 error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external vertex types.")
             end
 
+            % Compute Internal Metadata
             obj = gmt_VertexUpdate(obj);
 
         end
@@ -96,7 +98,7 @@ classdef gmt_Vertex
         % Updates based vertex specific information 
         function obj = gmt_VertexUpdate(obj)
 
-            % Determines StateType using _dot phrase 
+            % Determine State Type (Dynamic or Algebraic) 
             if contains(obj.CapacitanceEq,"_dot") == true
                 obj.StateType = gmt_StateType.Dynamic;
             else
@@ -120,154 +122,81 @@ classdef gmt_Vertex
             CapacitanceEq_var_tmp = split(obj.CapacitanceEq,[gmt_Symbols().Symbols,"(",")","^"]);
 
             % State Derivative Number Determination 
-            pattern_regex = '^x\d+_dot$|^x_dot$';
+            pattern_regex = 'x\d+_dot|x_dot';
+            match_tmp = regexp(obj.CapacitanceEq, pattern_regex,'match');
+            StateDerhasDigit = contains(match_tmp, digitsPattern);
+ 
+            % NOTE: Add Check for Numbering Order
 
-            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
-
-            % Convert From Cell to Array
-            if iscell(match_tmp)
-                match_tmp = ~cellfun('isempty',match_tmp);
-            elseif isempty(match_tmp)
-                match_tmp = false;
+            % Compute Number of State Derivatives
+            if ~isempty(match_tmp)
+                obj.NvSd = length(match_tmp);
+                obj.StateDerVariables = unique(match_tmp);
             end
 
-            % Compute number of states derivatives and store variables into list  
-
-            if any(match_tmp) % There is atleast one matching variable found 
-                match_idx = find(match_tmp); % Find the indices for matching variable 
-                varnamxd_tmp = CapacitanceEq_var_tmp(match_idx); % Return matching variables 
-                varnumxd_tmp = extractBefore(extractAfter(varnamxd_tmp,"x"),"_dot"); % Return suffix of state variable x
-                % Valid syntax is either a single state or multiple states 
-                isstremptyd = strlength(varnumxd_tmp) == 0;
-
-                if exist('isstrempty','var')
-                    assert(any(isstremptyd)==any(isstrempty),"State variable syntax does not match state derivative syntax. There is mismatch between number state variables and numbering state derivative variables.")
-                end
-                
-                if all(isstremptyd) 
-                    NvSd_tmp = 1;
-                else 
-                    assert(~any(isstremptyd),"Capacitance equation combines single state derivative vertex syntax 'x_dot' and multi-state vertex syntax 'x1_dot, x2_dot, x3_dot ...', review capacitance equation.")
-                    varnumxd_tmp = unique(sort(str2double(varnumxd_tmp)));
-                    %isx_consecutive = all(diff(varnumxd_tmp) == 1);
-                    %assert(isx_consecutive,"State derivative variables indexing is not monotically increasing")
-                    %isx_strt_one = min(varnumxd_tmp) == 1;
-                    %assert(isx_strt_one,"State derivative variable indexing does not start from one.")
-                    NvSd_tmp = length(varnumxd_tmp);
-                end
-                obj.StateDerVariables = unique(varnamxd_tmp');
-            else
-                NvSd_tmp = 0;
-            end
-
-            obj.NvSd = NvSd_tmp;
-
-            % Compute number of states and store variables into list  
+            stateder_tmp = extractBefore(obj.StateDerVariables,"_dot");
 
             % State Number Determination 
-            %pattern_regex = '^[x]\d$|^[x]$';
-            pattern_regex = '^[x]\d$';
+            pattern_regex = '(?<![A-Za-z0-9_])x\d*(?![A-Za-z0-9_])';
+            match_tmp = regexp(obj.CapacitanceEq, pattern_regex,'match');
+            StatehasDigit = contains(match_tmp, digitsPattern);
 
-            match_tmp = regexp(CapacitanceEq_var_tmp, pattern_regex);
-
-            % Convert From Cell to Array
-            if iscell(match_tmp)
-                match_tmp = ~cellfun('isempty',match_tmp);
-            elseif isempty(match_tmp)
-                match_tmp = false;
-            end
-
-            if any(match_tmp) % There is atleast one matching variable found 
-                match_idx = find(match_tmp); % Find the indices for matching variable 
-                varnamx_tmp = CapacitanceEq_var_tmp(match_idx); % Return matching variables 
-                varnumx_tmp = extractAfter(varnamx_tmp,"x"); % Return suffix of state variable x
-                % Valid syntax is either a single state or multiple states 
-                isstrempty = strlength(varnumx_tmp) == 0;
-                if all(isstrempty) 
-                    NvS_tmp = 1;
-                else 
-                    % assert(~any(isstrempty),"Capacitance equation combines single state vertex syntax 'x' and multi-state vertex syntax 'x1, x2, x3 ...', review capacitance equation.")
-                    varnumx_tmp = unique(sort(str2double(varnumx_tmp)));
-                    % isx_consecutive = all(diff(varnumx_tmp) == 1);
-                    % assert(isx_consecutive,"State variables indexing is not monotically increasing")
-                    % isx_strt_one = min(varnumx_tmp) == 1;
-                    % assert(isx_strt_one,"State variable indexing does not start from one.")
-                    NvS_tmp = length(varnumx_tmp);
+            % Update Dependent State Variables
+            numDependent = max(sum(StatehasDigit) - sum(StateDerhasDigit),0);
+            numStateVar_tmp = length(match_tmp);
+            if numDependent > 0
+                if numStateVar_tmp == 1 
+                    obj.ComponentStateVariable = match_tmp;
+                else
+                    statedep_tmp = setdiff(match_tmp,stateder_tmp);
+                    obj.ComponentStateVariable = unique(statedep_tmp);
                 end
-                obj.StateGraphVariables = unique(varnamx_tmp');
-            else
-                NvS_tmp = 0;
             end
 
-            obj.NvSa = NvS_tmp;
-
-            % Add Dynamic State Variables to State Variables 
-            % Compute Total Number of States
-            if ~isempty(obj.StateDerVariables)
-                StateVar_tmp = unique([obj.StateVariables, extractBefore(obj.StateDerVariables,"_dot")']);
-                obj.StateVariables = StateVar_tmp;
-                obj.NvS = length(StateVar_tmp);
+            % Update Independent State Variables
+            stateind_tmp = intersect(match_tmp,stateder_tmp);
+            if isempty(stateind_tmp) && obj.NvSd > 0
+                stateind_tmp = stateder_tmp;
+            elseif isempty(stateind_tmp) && ~isempty(match_tmp)
+                stateind_tmp = unique(match_tmp);
             end
+
+            obj.NvS = length(unique(stateind_tmp));
+            obj.StateVariables = unique(stateind_tmp);
 
             % Control Input Number Determination 
-            pattern_regexu = '^[u]\d|^[u]$';
-
-            matchu_tmp = regexp(CapacitanceEq_var_tmp, pattern_regexu);
-
-            % Convert From Cell to Array
-            if iscell(matchu_tmp)
-                matchu_tmp = ~cellfun('isempty',matchu_tmp);
-            elseif isempty(matchu_tmp)
-                matchu_tmp = false;
-            end
-
-            % Compute number of control inputs and store variables into list 
-            
-            if any(matchu_tmp) % There is atleast one matching variable found 
-                matchu_idx = find(matchu_tmp); % Find the indices for matching variable 
-                varnamu_tmp = CapacitanceEq_var_tmp(matchu_idx); % Return matching variables 
-                varnumu_tmp = extractAfter(varnamu_tmp,"u"); % Return suffix of state variable x
-                % Valid syntax is either a single state or multiple states 
-                isstrempty = strlength(varnumu_tmp) == 0;
-                if all(isstrempty) 
-                    NvU_tmp = 1;
-                else 
-                    assert(~any(isstrempty),"Capacitance equation combines single control input syntax 'u' and multi-control input syntax 'u1, u2, u3 ...', review capacitance equation.")
-                    varnumu_tmp = unique(sort(str2double(varnumu_tmp)));
-                    NvU_tmp = length(varnumu_tmp);
+            pattern_regexu = '(?<![A-Za-z0-9_])u\d*(?![A-Za-z0-9_])';
+            matchu_tmp = regexp(obj.CapacitanceEq, pattern_regexu,'match');
+            if ~isempty(matchu_tmp)
+                obj.NvU = length(matchu_tmp);
+                obj.InputVariables = unique(matchu_tmp);
+                if obj.StateType == gmt_StateType.Algebraic
+                    obj.StateVariables = obj.InputVariables;
                 end
-                obj.InputVariables = unique(varnamu_tmp');
-            else
-                NvU_tmp = 0;
             end
 
-            obj.NvU = NvU_tmp;
-
-            % Compute number of outputs 
-            if obj.StateType == gmt_StateType.Algebraic
-                % If the state is algebraic then it is an output 
-                NvY_tmp = 1;
+            % Number of Outputs Determination
+            if obj.StateType == gmt_StateType.Algebraic 
+                obj.NvY = 1;
                 obj.OutputVariables = "y";
-            else 
-                % Else the state is dynamic than it is not an output 
-                NvY_tmp = 0;
             end
-
-            obj.NvY = NvY_tmp;
 
             % Vertex Capacitance 
-            Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
-            % Create regular expression pattern to remove strings ending in math operator
-            pattern = "(" + strjoin(gmt_Symbols().Symbols, "|") + ")$";
-            % Run regular expression and remove operator if present at end of string             
-            match_tmp = regexprep(Capacitance_tmp, pattern, "");    
-            if strlength(match_tmp) == 0
-                obj.Capacitance = "1";
+            if obj.StateType == gmt_StateType.Dynamic 
+                Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
+                % Create regular expression pattern to remove strings ending in math operator
+                pattern = "(" + strjoin(gmt_Symbols().Symbols, "|") + ")$";
+                % Run regular expression and remove operator if present at end of string             
+                match_tmp = regexprep(Capacitance_tmp, pattern, "");    
+                if strlength(match_tmp) == 0
+                    obj.Capacitance = "1";
+                else
+                    obj.Capacitance = match_tmp;
+                end
             else
-                obj.Capacitance = match_tmp;
-
+                obj.Capacitance = "1";
             end
-        
+
         end
 
         %% External Metadata Methods
@@ -276,30 +205,39 @@ classdef gmt_Vertex
 
             % Assign Graph Specifics to Vertex 
             obj.GraphStateDerVariables = Ds_var_tmp;
-            obj.GraphStateVariables = As_var_tmp;
             obj.GraphOutputVariables = y_var_tmp;
-            
+
+            % Special Case 
+            special_cond1 = obj.VertexType == gmt_VertexType.External;
+            special_cond2 = obj.NvU == 1;
+            special_cond3 = isempty(As_var_tmp);
+            specialcase = all([special_cond1,special_cond2,special_cond3]);
+
+            if specialcase 
+                obj.GraphStateVariables = obj.InputVariables;
+                genVars_stateold = obj.InputVariables;
+            else
+                obj.GraphStateVariables = As_var_tmp;
+                genVars_stateold = obj.StateVariables;
+            end
+
             % Create Old and New List for Replacement 
-            genVars = [obj.StateVariables,obj.StateDerVariables];
+            genVars = [genVars_stateold,obj.StateDerVariables];
             graphVars = [obj.GraphStateVariables,obj.GraphStateDerVariables];
 
             CapacitanceEq_tmp = obj.CapacitanceEq;
             Capacitance_tmp = obj.Capacitance;
-            
-            if ~isempty(As_var_tmp) 
-                CapacitanceEq_tmp = regexprep(CapacitanceEq_tmp, 'x(?!\d)', As_var_tmp);
-                Capacitance_tmp = regexprep(Capacitance_tmp, 'x(?!\d)', As_var_tmp);
-            end
 
-            if ~isempty(Ds_var_tmp)
-                CapacitanceEq_tmp = regexprep(CapacitanceEq_tmp , '\bx_dot\b', Ds_var_tmp);
-                Capacitance_tmp = regexprep(Capacitance_tmp, '\bx_dot\b', Ds_var_tmp);
+            for i = 1:length(genVars)
+                % Build regex to match whole variable
+                expr = "(?<![A-Za-z0-9_])" + regexptranslate('escape', genVars(i)) + "*(?![A-Za-z0-9_])";
+        
+                % Replace with new variable
+                CapacitanceEq_tmp = regexprep(CapacitanceEq_tmp, expr, graphVars(i));
+                Capacitance_tmp = regexprep(Capacitance_tmp, expr, graphVars(i));
             end
-
 
             % Update Graph Specific Equations 
-            %obj.GraphCapacitanceEq = replace(obj.CapacitanceEq, genVars, graphVars);
-            %obj.GraphCapacitance = replace(obj.Capacitance, genVars, graphVars);
             obj.GraphCapacitanceEq = CapacitanceEq_tmp;
             obj.GraphCapacitance = Capacitance_tmp;
 
@@ -313,6 +251,11 @@ classdef gmt_Vertex
             obj.GraphPowerEq = "(" + final_tmp + ")";
             obj.GraphVertexEq = "(1/(" + obj.GraphCapacitance + "))*" + obj.GraphPowerEq;
             
+        end
+
+        % Updates Disturbance Type
+        function obj = gmt_VertexDisturanceType(obj,DisturbanceType)
+            obj.GraphDisturbanceType = DisturbanceType;
         end
 
     end

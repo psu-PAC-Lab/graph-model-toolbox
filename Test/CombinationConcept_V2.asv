@@ -1,0 +1,11 @@
+Mc = blkdiag(MainTank.Properties.M,TankSplit.Properties.M,RecirTank.Properties.M,CoolerLoad.Properties.M,EngineSplit.Properties.M,HeatLoad.Properties.M);
+
+Prev_Ne = MainTank.Properties.Ne
+Mc(:,Prev_Ne)
+
+SubSysA = gmt_Graph.gmt_CombineSimple(MainTank,TankSplit,[2, 1]);
+SubSysB = gmt_Graph.gmt_CombineSimple(SubSysA,RecirTank,[4, 2]);
+SubSysC = gmt_Graph.gmt_CombineSimple(SubSysB,CoolerLoad,[5, 2]);
+SubSysD = gmt_Graph.gmt_CombineSimple(SubSysC,EngineSplit,[6, 2]);
+SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[7, 2]);
+SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 8]);
