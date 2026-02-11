@@ -15,19 +15,20 @@ classdef gmt_Graph
         States string % String array of system state variable names
         Outputs string = [] % String array of system output variable names
         %Disturbances string = [] % String array of system disturbance variable names
-        ModelParameters gmt_ModelParameter % Model parameters object to manage model parameterization  
-        SystemEquations string % Symbolic system of equations for system
+        ModelParameters gmt_Parameter % Model parameters object to manage model parameterization  
+        SystemEquations string % System of equations with parameterization 
+        SystemEquationsSub string % System of equations with parameterization subbed in 
         InitialConditions 
         ModelMetadata = struct("ModelType",[],"FunctionName",[],"MfileCode",[],"MassMatrix",[]) 
-        Ports gmt_ConnectionPort % Object containing graph model connection points
+        Ports gmt_Port % Object containing graph model connection points
     end
 
     %% Public Methods 
     methods (Access = public)
         %% Constructor Graph 
-        function obj = gmt_Graph(Name,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin)
+        function obj = gmt_Graph(ObjectName,EdgeMatrix,EdgeArray,VertexArray,ParameterArray,InputArray,PortArray,varargin)
             
-            % Varagin Parsing 
+            % Variable Input Parsing 
             p = inputParser;
             p.KeepUnmatched = true;
             addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
@@ -36,14 +37,18 @@ classdef gmt_Graph
 
             % Generates instance of gmt_Graph object
             % Assign Data
-            obj.Name = Name;
+            obj.Name = ObjectName;
             obj.EdgeMatrix = EdgeMatrix;
-            obj.Edges = Edges;
-            obj.Vertices = Vertices;
+            obj.Edges = EdgeArray;
+            obj.Vertices = VertexArray;
 
+            % Compute Basic Graph Properties (Nv, Ne, and M) 
+            obj.Properties = gmt_GraphProperties(obj);
+
+            % Assign Parameter Array
             % Possibly set this up for varargin 
-            if ~isempty(Parameters) 
-                obj.ModelParameters = Parameters;
+            if ~isempty(ParameterArray) 
+                obj.ModelParameters = ParameterArray;
                 % If A Componennt Model Add Parent Name to Model Parameter Class
                 if componentMdl 
                     for i = 1:length(obj.ModelParameters)
@@ -57,17 +62,23 @@ classdef gmt_Graph
                     end
                 end
             end
-
+            
+            % Assign Input Array 
             % Possibly set this up for varargin 
-            if ~isempty(Inputs)
-                obj.InputData = Inputs;
+            if ~isempty(InputArray)
+                obj.InputData = InputArray;
                 for i = 1:length(obj.InputData)
                     obj.InputData(i) = obj.InputData(i).gmt_GraphInput(obj,[obj.InputData(i).VariableName],varargin{:});
                 end
             end
 
-            % Compute Basic Graph Properties (Nv, Ne, and M) 
-            obj.Properties = gmt_GraphProperties(obj);
+            % Assign Port Array
+            % Possibly set this up for varargin
+            if ~isempty(PortArray)
+                for i = 1:length(PortArray)
+                obj.Ports(i) = PortArray(i).gmt_ParentPort(obj);
+                end
+            end
 
             % DiGraph Update
             obj = gmt_DiGraphUpdate(obj);
@@ -76,18 +87,49 @@ classdef gmt_Graph
             obj = gmt_ModelUpdate(obj,varargin{:});
         end
 
-        %% Compute Jacobian
-        function [SysEqn, JacA, JacB] = gmt_SymbolicJacobian(obj)
-            SysEqn = symfun(rhs(str2sym(obj.SystemEquations)),sym([obj.States,obj.Inputs]));
-            JacA = jacobian(SysEqn,[sym([obj.States])]);
-            JacB = jacobian(SysEqn,[sym([obj.Inputs])]);
+        %% Model Linearization
+        % Generates linear model based on first order Taylor series approximation 
+        function [A, B] = gmt_ControlModel(obj,varargin)
+            
+            % Input Parsing 
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, 'Simplify',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'NumSub',false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'Discret',[], @(x) isnumeric(x) && isscalar(x));
+            parse(p, varargin{:});
+
+            % Create Symbolic System of Equations
+            if p.Results.NumSub
+                assert(obj.ModelMetadata.ModelType == gmt_ModelType.Analytical,"Numerical substition on available for analytical models")
+                SysEqn = symfun(rhs(str2sym(obj.SystemEquationsSub)),sym([obj.States,obj.Inputs]));
+            else
+                SysEqn = symfun(rhs(str2sym(obj.SystemEquations)),sym([obj.States,obj.Inputs]));
+            end
+
+            if p.Results.Simplify 
+                A = simplify(jacobian(SysEqn,[sym([obj.States])]));
+                B = simplify(jacobian(SysEqn,[sym([obj.Inputs])]));
+            else
+                A = jacobian(SysEqn,[sym([obj.States])]);
+                B = jacobian(SysEqn,[sym([obj.Inputs])]);
+            end
+
+            if ~isempty(p.Results.Discret)
+                dt = p.Results.Discret;
+                A = eye(size(A)) + A*dt;
+                B = B*dt;
+            end
+
         end
+
+        %% Model Zero-Order Hold Discretization 
         
         %% Graph Report
         % Generates then displays vertex and edge report of entire model
-        function gmt_GraphReport(obj)
+        function gmt_ReportGraph(obj)
             % Vertex Table
-            varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","Capacitance Inputs","Capacitance","Capacitance Equation","Power Equation"];
+            varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","State Variable Units","Capacitance Inputs","Capacitance","Capacitance Equation","Power Equation"];
             for idx_tmp = 1:length(varNames_tmp)
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
@@ -106,14 +148,21 @@ classdef gmt_Graph
                 else
                     table_tmp(i,3) = {obj.Vertices(i).GraphStateVariables};
                 end
-                if isempty(obj.Vertices(i).InputVariables)
-                    table_tmp(i,4) = {""};
+
+                if isempty(obj.Vertices(i).Units)
+                    table_tmp(i,4) = {"Undefined"};
                 else
-                    table_tmp(i,4) = {join([obj.Vertices(i).InputVariables],", ")};
+                    table_tmp(i,4) = {obj.Vertices(i).Units};
                 end
-                table_tmp(i,5) = {obj.Vertices(i).GraphCapacitance};
-                table_tmp(i,6) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
-                table_tmp(i,7) = {str2sym(obj.Vertices(i).GraphPowerEq)};
+
+                if isempty(obj.Vertices(i).InputVariables)
+                    table_tmp(i,5) = {""};
+                else
+                    table_tmp(i,5) = {join([obj.Vertices(i).InputVariables],", ")};
+                end
+                table_tmp(i,6) = {obj.Vertices(i).GraphCapacitance};
+                table_tmp(i,7) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
+                table_tmp(i,8) = {str2sym(obj.Vertices(i).GraphPowerEq)};
             end
 
             fprintf('\n'); disp(table_tmp) 
@@ -144,7 +193,7 @@ classdef gmt_Graph
 
         %% Parameter Report
         % Generates then displays parameter report of all model parameterization 
-        function gmt_ParameterReport(obj)
+        function gmt_ReportParameter(obj)
             num_params = length(obj.ModelParameters);
             varNames_tmp = ["Parent", "Parameter", "Description", "Units", "Parameter Type", "System Parameter", "Optimization Parameter"];
             for idx_tmp = 1:length(varNames_tmp)
@@ -175,18 +224,19 @@ classdef gmt_Graph
 
         %% Connection Report  
         % Returns the port connection data in easy to read format
-        function gmt_ConnectionReport(obj)
+        function gmt_ReportConnection(obj)
             num_params = length(obj.Ports);
-            varNames_tmp = ["Description","PortType", "Element Number"];
+            varNames_tmp = ["Parent","Description","PortType", "Element Number"];
             for idx_tmp = 1:length(varNames_tmp)
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
             sz = [num_params length(varNames_tmp)];
             table_tmp = table('Size',sz,'VariableTypes',varTypes_tmp,'VariableNames',varNames_tmp);
             for i = 1:num_params
-                table_tmp(i,1) = {obj.Ports(i).Description};
-                table_tmp(i,2) = {obj.Ports(i).PortType};
-                table_tmp(i,3) = {obj.Ports(i).ElementNumber};
+                table_tmp(i,1) = {obj.Ports(i).ParentName};
+                table_tmp(i,2) = {obj.Ports(i).Description};
+                table_tmp(i,3) = {obj.Ports(i).PortType};
+                table_tmp(i,4) = {obj.Ports(i).ElementNumber};
             end
 
             fprintf('\n'); disp(table_tmp) 
@@ -195,7 +245,7 @@ classdef gmt_Graph
 
         %% Input Report  
         % Returns the port connection data in easy to read format
-        function gmt_InputReport(obj)
+        function gmt_ReportInput(obj)
             num_params = length(obj.InputData);
             varNames_tmp = ["Variable","Description","Units"];
             for idx_tmp = 1:length(varNames_tmp)
@@ -219,16 +269,16 @@ classdef gmt_Graph
 
         %% Full Report 
         % Generates all reports 
-        function gmt_FullReport(obj)
+        function gmt_ReportFull(obj)
 
             fprintf('\n<strong>Graph Report</strong>\n');
-            gmt_GraphReport(obj)
+            gmt_ReportGraph(obj)
             fprintf('<strong>Parameter Report</strong>\n');
-            gmt_ParameterReport(obj)
+            gmt_ReportParameter(obj)
             fprintf('<strong>Input Report</strong>\n');
-            gmt_InputReport(obj)
+            gmt_ReportInput(obj)
             fprintf('<strong>Connection Port Report</strong>\n');
-            gmt_ConnectionReport(obj)
+            gmt_ReportConnection(obj)
 
         end
 
@@ -321,12 +371,13 @@ classdef gmt_Graph
             % Varagin Input Argument Parsing 
             p = inputParser;
             p.KeepUnmatched = true;
-            addParameter(p, 'BuildModel', false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'BuildSim', [], @(x) isstring(x));
             addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
-            addParameter(p, 'CombineInputs', [], @(s) isstring(s) && size(s,2) == 2);
+            addParameter(p, 'CombineInputs', [], @(x) isstring(x) && size(x,2) == 2);
+            addParameter(p, 'InitCond', [], @(x) isnumeric(x) && size(x,2) == obj.Properties.Nv);
             parse(p, varargin{:});
             CombineInputs = p.Results.CombineInputs;
-            makeFunc_mfile  = p.Results.BuildModel;
+            makeFunc_mfile  = ~isempty(p.Results.BuildSim);
             componentMdl = ~p.Results.SystemModel;
 
             % Updates graph properties object and performs validation checks
@@ -513,11 +564,23 @@ classdef gmt_Graph
             % Create a MATLAB symbolic equation 
             obj.SystemEquations = sys_eq_str_tmp; %str2sym(sys_eq_str_tmp);
 
+
+    
             % Determine Model Type 
             if any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Lookup) || any([obj.ModelParameters.ParameterType] == gmt_ParameterType.Neural_Network)
                 obj.ModelMetadata.ModelType = gmt_ModelType.Numerical;
             else
                 obj.ModelMetadata.ModelType = gmt_ModelType.Analytical;
+            end
+
+            if obj.ModelMetadata.ModelType == gmt_ModelType.Analytical
+
+                obj.SystemEquationsSub = replace(sys_eq_str_tmp,[obj.ModelParameters.Variable],string([obj.ModelParameters.Data]));
+
+            else
+
+                obj.SystemEquationsSub = "Not Available for Numerical Models";
+
             end
 
             if componentMdl
@@ -531,9 +594,17 @@ classdef gmt_Graph
                 end
             end
 
-            [Akeep, ia, ib] = intersect([obj.Inputs],[obj.InputData.GraphVariableName], 'stable');
-            InputData_Match_tmp = ismember([obj.InputData.GraphVariableName],Akeep);
-            obj.InputData = obj.InputData(InputData_Match_tmp);
+            if ~isempty(p.Results.InitCond)
+                obj.InitialConditions = p.Results.InitCond;
+            end
+
+            if ~isempty(obj.Inputs) && ~isempty(obj.InputData)
+
+                [Akeep, ia, ib] = intersect([obj.Inputs],[obj.InputData.GraphVariableName], 'stable');
+                InputData_Match_tmp = ismember([obj.InputData.GraphVariableName],Akeep);
+                obj.InputData = obj.InputData(InputData_Match_tmp);
+
+            end
 
             %% Create System Model in M File          
             if makeFunc_mfile 
@@ -652,8 +723,8 @@ classdef gmt_Graph
                 obj.ModelMetadata.MfileCode = sysfun_mfile_combined;
                 obj.ModelMetadata.FunctionName = sysfun_FunctionName;
 
-                gmt_root = string(extractBefore(which('gmt_Graph.m'),'\General Toolbox'));
-                sys_mdl_flder_tmp = "\System Models\";
+                %gmt_root = string(extractBefore(which('gmt_Graph.m'),'\General Toolbox'));
+                %sys_mdl_flder_tmp = "\System Models\";
                 sysfun_filename_tmp = "sysFun_" + obj.Name + ".m";
                 sysobj_filename_tmp = "sysObj_" + obj.Name + ".mat";
                 sysname_tmp = "sys_" + obj.Name;
@@ -662,7 +733,8 @@ classdef gmt_Graph
                 time_tmp = string(datetime('now','Format','HHmmss'));
 
                 sys_bld_flder_tmp = sysname_tmp + "_" + date_tmp +  "_" + time_tmp;
-                sys_bld_path_tmp = gmt_root + sys_mdl_flder_tmp + sys_bld_flder_tmp;
+                %sys_bld_path_tmp = gmt_root + sys_mdl_flder_tmp + sys_bld_flder_tmp;
+                sys_bld_path_tmp = p.Results.BuildSim + "\" + sys_bld_flder_tmp;
 
                 mkdir(sys_bld_path_tmp)
 
@@ -675,7 +747,12 @@ classdef gmt_Graph
                 %% Simulation Script Generator 
                 inputstr_tmp = [obj.InputData.VariableName]'+ " = 0;% " + [obj.InputData.Description]';
                 simtimstr_tmp = "SimTEnd = 2000;";
-                icstr1_tmp = [obj.States]' + "_0 = 1;  %" + [obj.Vertices.VertexName]' + "(" + string([obj.Vertices.VertexType]')+ "-" + string([obj.Vertices.GraphDisturbanceType]') +")";
+                if isempty(obj.InitialConditions)
+                    ic = string(1);
+                else 
+                    ic = string(obj.InitialConditions)';
+                end
+                icstr1_tmp = [obj.States]' + "_0 = "+ ic + ";  %" + [obj.Vertices.VertexName]' + "(" + string([obj.Vertices.VertexType]')+ "-" + string([obj.Vertices.GraphDisturbanceType]') +")";
                 icstr2_tmp = "y0 = [" + strjoin([obj.States]+"_0",",") + "];";
                 icstr_tmp = [icstr1_tmp;icstr2_tmp];
                 sysFuncName_tmp = obj.ModelMetadata.FunctionName; 
@@ -686,7 +763,7 @@ classdef gmt_Graph
                 "InternalIdx = (["+obj.Name+".Vertices.VertexType] == gmt_VertexType.Internal);";
                 "yint = y(:,InternalIdx);";
                 "NumInternal = sum(InternalIdx);";
-                "DimSubPlot = double(int32(sqrt(NumInternal)));";
+                "DimSubPlot = max(double(int32(sqrt(NumInternal))),2);";
                 
                 "ylabels_tmp = ["+obj.Name+".Vertices(InternalIdx).VertexName];";
                 "ylabelsnew_tmp = replace(ylabels_tmp, " + """:"""+ ", newline);";
@@ -727,12 +804,12 @@ classdef gmt_Graph
 
             p = inputParser;
             p.KeepUnmatched = true;
-            addParameter(p, 'BuildModel', false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'BuildSim', [], @(x) isstring(x));
             addParameter(p, 'SystemModel',false, @(x) islogical(x) && isscalar(x));
             addParameter(p, 'CombineInputs', [], @(s) isstring(s) && size(s,2) == 2);
             parse(p, varargin{:});
             CombineInputs = p.Results.CombineInputs;
-            makeFunc_mfile  = p.Results.BuildModel;
+            makeFunc_mfile  = p.Results.BuildSim;
             componentMdl = ~p.Results.SystemModel;
     
             for i = 1:length(obj.Edges)  
@@ -750,7 +827,7 @@ classdef gmt_Graph
                 VerticesCapacitanceEq_tmp(j) = replace(obj.Vertices(j).CapacitanceEq,CombineInputs(:,2),CombineInputs(:,1));
     
                 if obj.Vertices(j).VertexType == gmt_VertexType.External
-                    Vertex_Updated(j) = gmt_Vertex(obj.Vertices(j).VertexName,VerticesCapacitanceEq_tmp(j),string(obj.Vertices(j).VertexType));
+                    Vertex_Updated(j) = gmt_Vertex(obj.Vertices(j).VertexName,VerticesCapacitanceEq_tmp(j),string(obj.Vertices(j).VertexType),true);
                 else
                     Vertex_Updated(j) = gmt_Vertex(obj.Vertices(j).VertexName,VerticesCapacitanceEq_tmp(j));
                 end
@@ -762,9 +839,7 @@ classdef gmt_Graph
 
             Ports_tmp = obj.Ports;
 
-            obj = gmt_Graph(obj.Name,obj.EdgeMatrix,obj.Edges,obj.Vertices,obj.ModelParameters,obj.InputData,varargin{:});
-
-            obj.Ports = Ports_tmp;
+            obj = gmt_Graph(obj.Name,obj.EdgeMatrix,obj.Edges,obj.Vertices,obj.ModelParameters,obj.InputData,Ports_tmp,varargin{:});
 
         end
 
@@ -1022,7 +1097,7 @@ classdef gmt_Graph
                 % Update Vertex Objects
                 for i = 1:length(VerticesNew)
                     if VerticesNew(i).VertexType == gmt_VertexType.External
-                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType));
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType),true);
                     else
                         VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq);
                     end
@@ -1118,14 +1193,13 @@ classdef gmt_Graph
 
             Ports_tmp = [PortsA(:); PortB_tmp(:)]';
 
-
-            
-            %% BuildGraphModel 
-            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,NewParam,InputsUpdated,varargin{:});
-            %% Create New Port Objects
+             %% Create New Port Objects
             for i = 1:length(Ports_tmp)
-                objC.Ports(i) = gmt_ConnectionPort(objC,string(Ports_tmp(i).PortType),Ports_tmp(i).ElementNumber,string(Ports_tmp(i).EnergyDomain));
+                PortsUpdated(i) = gmt_Port(string(Ports_tmp(i).PortType),Ports_tmp(i).ElementNumber,string(Ports_tmp(i).EnergyDomain));
             end
+ 
+            %% BuildGraphModel 
+            objC = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,NewParam,InputsUpdated,PortsUpdated,varargin{:});
 
         end
 
@@ -1200,7 +1274,7 @@ classdef gmt_Graph
                 % Update Vertex Objects
                 for i = 1:length(VerticesNew)
                     if VerticesNew(i).VertexType == gmt_VertexType.External
-                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType));
+                        VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq,string(VerticesNew(i).VertexType),true);
                     else
                         VertexUpdated(i) = gmt_Vertex(VerticesNew(i).VertexName,VerticesNew(i).CapacitanceEq);
                     end
@@ -1283,16 +1357,19 @@ classdef gmt_Graph
 
             end
 
-            Params_New = obj.ModelParameters;
+            NewParam = obj.ModelParameters;
 
             %% Update System Port Connections 
             Ports_idx = 1:length(obj.Ports);
             PortsA_idx_keep = setdiff(Ports_idx,[Connection(1);Connection(2)]);
             PortsA = obj.Ports(PortsA_idx_keep);
 
-            obj_tmp = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,obj.InputData,varargin{:});  
-            obj_tmp.Ports = [PortsA(:)]';
-            obj = obj_tmp;
+            %% BuildGraphModel 
+            obj = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,NewParam,obj.InputData,PortsA,varargin{:});
+
+            % obj_tmp = gmt_Graph("Combine",EdgeMatrix_New,EdgeUpdated,VertexUpdated,Params_New,obj.InputData,varargin{:});  
+            % obj_tmp.Ports = [PortsA(:)]';
+            % obj = obj_tmp;
 
         end
     end

@@ -12,16 +12,16 @@ classdef gmt_HeatLoad < gmt_Graph
         %% Constructor Method
         function obj = gmt_HeatLoad(ObjectName,varargin)
 
-            % Define Vertices 
-            Vertices(1) = gmt_Vertex("Load Temperature","cp_f*V*Rho*x_dot");
-            Vertices(2) = gmt_Vertex("Inlet","cp_f*Rho*V*x_dot","External");
-            Vertices(3) = gmt_Vertex("Outlet","cp_f*Rho*V*x_dot","External");
-            Vertices(4) = gmt_Vertex("Energy Applied","x_dot","External");
+            % Define Vertex 
+            Vertex(1) = gmt_Vertex("Load Temperature","cp_f*V*Rho*x_dot");
+            Vertex(2) = gmt_Vertex("Inlet","cp_f*Rho*V*x_dot","External",true);
+            Vertex(3) = gmt_Vertex("Outlet","cp_f*Rho*V*x_dot","External",true);
+            Vertex(4) = gmt_Vertex("Energy Applied","x_dot","External",true);
 
-            % Define Edges 
-            Edges(1) = gmt_Edge("Advection In","cp_f*u1*xt");
-            Edges(2) = gmt_Edge("Advection Out","cp_f*u1*xt");
-            Edges(3) = gmt_Edge("Power Applied","u2","External");
+            % Define Edge 
+            Edge(1) = gmt_Edge("Advection In","cp_f*u1*xt");
+            Edge(2) = gmt_Edge("Advection Out","cp_f*u1*xt");
+            Edge(3) = gmt_Edge("Power Applied","u2","External");
 
             % Define Edge Matrix
             EdgeMatrix = [2 1; ...
@@ -29,21 +29,22 @@ classdef gmt_HeatLoad < gmt_Graph
                           4 1];
 
             % Define Default Model Parameterization 
-            Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
-            Parameters(2) = gmt_ModelParameter("Volume","V",0.002,"Units","m^3");
-            Parameters(3) = gmt_ModelParameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
+            Parameter(1) = gmt_Parameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
+            Parameter(2) = gmt_Parameter("Volume","V",0.002,"Units","m^3");
+            Parameter(3) = gmt_Parameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
 
             % Define Input Labeling 
-            Inputs(1) = gmt_Input("u1","Inlet Mass Flow 1","Units","kg/s");
-            Inputs(2) = gmt_Input("u2","Energy Applied","Units","W");
-
-            % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin{:});
+            Input(1) = gmt_Input("u1","Inlet Mass Flow 1","Units","kg/s");
+            Input(2) = gmt_Input("u2","Energy Applied","Units","W");
 
             % Define Available Connection Ports
-            obj.Ports(1) = gmt_ConnectionPort(obj,"EdgeConnection",1,"Thermal");
-            obj.Ports(2) = gmt_ConnectionPort(obj,"EdgeConnection",2,"Thermal");
-            obj.Ports(3) = gmt_ConnectionPort(obj,"VertexConnection",1,"Thermal");
+            Port(1) = gmt_Port("EdgeConnection",1,"Thermal");
+            Port(2) = gmt_Port("EdgeConnection",2,"Thermal");
+            Port(3) = gmt_Port("VertexConnection",1,"Thermal");
+
+            % Creates Heat Load Object 
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,Input,Port,varargin{:});
+
         end
     end
 end

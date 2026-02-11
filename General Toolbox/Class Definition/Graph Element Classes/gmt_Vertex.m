@@ -13,6 +13,7 @@ classdef gmt_Vertex
         VertexName string % User specified name to define an vertex object
         CapacitanceEq string % User specified name formula defining the vertex capacitance equation
         VertexType string = gmt_VertexType.Internal % Internally specified vertex type assigned during graph model generation
+        Units % Optional argument to specify units for state variable
     end
 
     properties (SetAccess = protected)
@@ -47,6 +48,12 @@ classdef gmt_Vertex
         %% Constructor Method (User Defined and Internal Meta Data Update) 
         function obj = gmt_Vertex(VertexName,CapacitanceEquation,varargin)
 
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, "External",false, @(x) islogical(x) && isscalar(x));
+            addParameter(p, 'Units',[], @(x) isstring(x));
+            parse(p, varargin{:});
+
             % Generates instance of gmt_GraphVertex object
             Name_data_valid = isa(VertexName,'string');
             CapacitanceEquation_data_valid = isa(CapacitanceEquation,'string');
@@ -75,18 +82,17 @@ classdef gmt_Vertex
             obj.VertexName = VertexName; % Assigns input variable Name to VertexName property 
             obj.CapacitanceEq = CapacitanceEquation; % Assigns input variable Equation to CapacitanceEq property 
 
-            % Determine if user has specified external edge type
-            numInputs = length(varargin); % Compute number of variable length input arguments 
+            % Update Vertex Type if User Specified 
+            if ~isempty(p.Results.External)
 
-            % Check variable length input argument if one is assigned 
-            if numInputs == 1 
-                if strcmpi(varargin{1},gmt_VertexType.External) % Case-insensitive string compare
-                    obj.VertexType = gmt_VertexType.External; % Assign vertex type to available enumeration 
-                else % Return error is variable input argument does not match upper or lower class spelling
-                    error("Check spelling, user specified vertex type other than 'External'. Users only need to define external vertex types, internal edge type is default assumption.")
+                if p.Results.External == true
+                    obj.VertexType = gmt_VertexType.External;
                 end
-            elseif numInputs > 1 % More than one variable return error 
-                error("More than one variable length input argument has been assigned. Object only accepts one variable input argument for external vertex types.")
+            end
+
+            % Update Units if User Specified
+            if ~isempty(p.Results.Units)
+                obj.Units = p.Results.Units;
             end
 
             % Compute Internal Metadata

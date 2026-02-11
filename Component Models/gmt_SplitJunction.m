@@ -12,17 +12,17 @@ classdef gmt_SplitJunction < gmt_Graph
         %% Constructor Method
         function obj = gmt_SplitJunction(ObjectName,n_in,n_out,varargin)
 
-            Vertices(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*Rho*x_dot");
+            Vertex(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*Rho*x_dot");
             
             % Define Vertices 
             for i = 1:n_in
                 VertexName_tmp = 'Inlet_' + string(i);
-                Vertices(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External");
+                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External",true);
             end
 
             for i = n_in+1:n_in+n_out
                 VertexName_tmp = 'Outlet_' + string(i);
-                Vertices(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External");
+                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External",true);
             end
 
             % Define Edges and Inputs
@@ -36,8 +36,8 @@ classdef gmt_SplitJunction < gmt_Graph
                 end
                 Input_tmp = "u" + string(i);
                 EdgeEq_tmp = "u" + string(i) + "*cp_f*xt";
-                Edges(i) = gmt_Edge(EdgeName_tmp,EdgeEq_tmp);
-                Inputs(i) = gmt_Input(Input_tmp,InputName_tmp,"Units","kg/s");
+                Edge(i) = gmt_Edge(EdgeName_tmp,EdgeEq_tmp);
+                Input(i) = gmt_Input(Input_tmp,InputName_tmp,"Units","kg/s");
             end
      
             % Define Edge Matrix
@@ -45,17 +45,17 @@ classdef gmt_SplitJunction < gmt_Graph
                                 [ones(n_out,1),(n_in+2:n_in+n_out+1)']];
              
             % Define Default Model Parameterization 
-            Parameters(1) = gmt_ModelParameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
-            Parameters(2) = gmt_ModelParameter("Volume","V",0.002,"Units","m^3");
-            Parameters(3) = gmt_ModelParameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
-
-            % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Parameters,Inputs,varargin{:})
+            Parameter(1) = gmt_Parameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
+            Parameter(2) = gmt_Parameter("Volume","V",0.002,"Units","m^3");
+            Parameter(3) = gmt_Parameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
 
             % Define Available Connection Ports
-            for i = 1:length(Edges)
-                obj.Ports(i) = gmt_ConnectionPort(obj,"EdgeConnection",i,"Thermal");
+            for i = 1:length(Edge)
+                Port(i) = gmt_Port("EdgeConnection",i,"Thermal");
             end
+
+            % Creates Split Junction Object 
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,Input,Port,varargin{:});
 
         end
     end

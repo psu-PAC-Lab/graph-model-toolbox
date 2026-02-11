@@ -10,35 +10,24 @@ classdef gmt_Battery < gmt_Graph
 
     methods
         %% Constructor Method
-        function obj = gmt_Battery(ObjectName)
+        function obj = gmt_Battery(ObjectName,varargin)
 
-            % Define Hardcoded Coefficients
+            % Define Vertex 
+            Vertex(1) = gmt_Vertex("SOC","Q*Vocv*x_dot");
+            Vertex(2) = gmt_Vertex("Battery Voltage 1","C1*x*x_dot");
+            Vertex(3) = gmt_Vertex("Battery Voltage 2","C2*x*x_dot");
+            Vertex(4) = gmt_Vertex("Battery Cell Temperature","Cc*x_dot");
+            Vertex(5) = gmt_Vertex("Battery Surface Temperature","Cs*x_dot","External",true);
+            Vertex(6) = gmt_Vertex("Battery Current","Vocv*x_dot","External",true);
 
-            % Define User Define Values 
-
-            % If User Defines UserDefined Populated Grab Values
-            % Pick Battery Type and Grab
-           
-            % Else Use Default Parmeters 
-
-            % C2 = interp2(x,y,z,Tbatt(o),Soc(o))
-
-            % Define Vertices 
-            Vertices(1) = gmt_Vertex("SOC","Q*Vocv*x_dot");
-            Vertices(2) = gmt_Vertex("Battery Voltage 1","C1*x*x_dot");
-            Vertices(3) = gmt_Vertex("Battery Voltage 2","C2*x*x_dot");
-            Vertices(4) = gmt_Vertex("Battery Cell Temperature","Cc*x_dot");
-            Vertices(5) = gmt_Vertex("Battery Surface Temperature","Cs*x_dot","External");
-            Vertices(6) = gmt_Vertex("Battery Current","Vocv*x_dot","External");
-
-            % Define Edges 
-            Edges(1) = gmt_Edge("Battery Cell 1 Thermal Transfer","(xt^2)/R1");
-            Edges(2) = gmt_Edge("Battery Cell 2 Thermal Transfer","(xt^2)/R2");
-            Edges(3) = gmt_Edge("Current Load Heater Transfer","(xt^2)/Rs");
-            Edges(4) = gmt_Edge("Battery Cell to Surface Thermal Transfer","(xt-xh)/Rc");
-            Edges(5) = gmt_Edge("Battery Charge Rate","Vocv*xt");
-            Edges(6) = gmt_Edge("Battery Cell 1 Power Rate","xt*xh");
-            Edges(7) = gmt_Edge("Battery Cell 2 Power Rate","xt*xh");
+            % Define Edge 
+            Edge(1) = gmt_Edge("Battery Cell 1 Thermal Transfer","(xt^2)/R1");
+            Edge(2) = gmt_Edge("Battery Cell 2 Thermal Transfer","(xt^2)/R2");
+            Edge(3) = gmt_Edge("Current Load Heater Transfer","(xt^2)/Rs");
+            Edge(4) = gmt_Edge("Battery Cell to Surface Thermal Transfer","(xt-xh)/Rc");
+            Edge(5) = gmt_Edge("Battery Charge Rate","Vocv*xt");
+            Edge(6) = gmt_Edge("Battery Cell 1 Power Rate","xt*xh");
+            Edge(7) = gmt_Edge("Battery Cell 2 Power Rate","xt*xh");
             
             % Define Edge Matrix
             EdgeMatrix = [2  4; ...
@@ -51,23 +40,22 @@ classdef gmt_Battery < gmt_Graph
                           ];
 
             % Define Model Parameterization 
-            Param(1) = gmt_ModelParameter("Cell 1 Capacitance","C1",1.538844236133056e+03,[]);
-            Param(2) = gmt_ModelParameter("Cell 2 Capacitance","C2",1.538844236133056e+03,[]);
-            Param(3) = gmt_ModelParameter("Cell 1 Resistance","R1",0.033078975870769,[]);
-            Param(4) = gmt_ModelParameter("Cell 2 Resistance","R2",0.033078975870769,[]);
-            Param(5) = gmt_ModelParameter("Open Circuit Voltage","Vocv",500,[]);
-            Param(6) = gmt_ModelParameter("Cell Thermal Capacitance","Cc",10,[]);
-            Param(7) = gmt_ModelParameter("Surface Thermal Capacitance","Cs",10,[]);
-            Param(8) = gmt_ModelParameter("Battery Capacity","Q",100,[]);
-            Param(9) = gmt_ModelParameter("Internal Series Resistance","Rs",0.033078975870769,[]);
-            Param(10) = gmt_ModelParameter("Theraml Conductivity","Rc",0.033078975870769,[]);
-
-            % Creates an Battery Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param,"CombineNames");
+            Parameter(1) = gmt_Parameter("Cell 1 Capacitance","C1",1.538844236133056e+03);
+            Parameter(2) = gmt_Parameter("Cell 2 Capacitance","C2",1.538844236133056e+03);
+            Parameter(3) = gmt_Parameter("Cell 1 Resistance","R1",0.033078975870769);
+            Parameter(4) = gmt_Parameter("Cell 2 Resistance","R2",0.033078975870769);
+            Parameter(5) = gmt_Parameter("Open Circuit Voltage","Vocv",500);
+            Parameter(6) = gmt_Parameter("Cell Thermal Capacitance","Cc",10);
+            Parameter(7) = gmt_Parameter("Surface Thermal Capacitance","Cs",10);
+            Parameter(8) = gmt_Parameter("Battery Capacity","Q",100);
+            Parameter(9) = gmt_Parameter("Internal Series Resistance","Rs",0.033078975870769);
+            Parameter(10) = gmt_Parameter("Theraml Conductivity","Rc",0.033078975870769);
 
             % Define Available Connection Ports 
-            % obj.ConnectionPorts(1) = gmt_ConnectionPort(obj,"EdgeConnection",4,"Electrical");
+            Port(1) = gmt_Port("EdgeConnection",4,"Electrical");
 
+            % Creates Battery Object 
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,[],Port,varargin{:});
 
         end
     end

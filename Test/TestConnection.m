@@ -28,13 +28,13 @@ InputMatching = ...
   "u10", "(u2+u6-u5)"];   
 
 % Update Model W/ Matched Inputs
-Combine = SysFin.gmt_InputCommon(InputMatching,"BuildModel",true);
+Combine = SysFin.gmt_InputCommon(InputMatching,"BuildSim","C:\Users\jmp8430\Documents\Research\Practice System Modeling");
 
 % Plot Graph
 Combine.gmt_PlotGraph
 
 % Generate Graph Report
-Combine.gmt_FullReport
+Combine.gmt_ReportFull
 toc
 
 % SubSysB = gmt_Graph.gmt_CombineSimple(CoolerLoad,RecirTank,[2, 1],"SystemModel",true);

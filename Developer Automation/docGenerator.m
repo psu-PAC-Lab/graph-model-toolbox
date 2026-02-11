@@ -57,7 +57,7 @@
     % Create TocItems
 
         lvl1 = docNode.createElement('tocitem');
-        help_filename_tmp = 
+        %help_filename_tmp = 
         lvl1.setAttribute('target',help_filename_tmp);
         help_name_tmp = extractBefore(help_filename_tmp,".m");
         lvl1.appendChild(docNode.createTextNode(help_name_tmp));

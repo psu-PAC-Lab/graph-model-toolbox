@@ -10,19 +10,19 @@ classdef gmt_DCMotor < gmt_Graph
 
     methods
         %% Constructor Method
-        function obj = gmt_DCMotor(ObjectName)
+        function obj = gmt_DCMotor(ObjectName,varargin)
 
-            % Define Vertices 
-            Vertices(1) = gmt_Vertex("Motor Current","L*x*x_dot");
-            Vertices(2) = gmt_Vertex("Angular Velocity","J*x*x_dot");
-            Vertices(3) = gmt_Vertex("Motor Temperature","Cp*x_dot");
+            % Define Vertex 
+            Vertex(1) = gmt_Vertex("Motor Current","L*x*x_dot");
+            Vertex(2) = gmt_Vertex("Angular Velocity","J*x*x_dot");
+            Vertex(3) = gmt_Vertex("Motor Temperature","Cp*x_dot");
 
-            % Define Edges 
-            Edges(1) = gmt_Edge("Electrical to Mechanical Conversion","Kt*xt*xh");
-            Edges(2) = gmt_Edge("Mechanical Losses","b*xt^2+c*xt");
-            Edges(3) = gmt_Edge("Electrical Losses","R*xt^2");
-            % Edges(5) = gmt_Edge("Electrical Input","1*xt*xh");
-            % Edges(6) = gmt_Edge("Mechanical Output","1*xt*xh");
+            % Define Edge 
+            Edge(1) = gmt_Edge("Electrical to Mechanical Conversion","Kt*xt*xh");
+            Edge(2) = gmt_Edge("Mechanical Losses","b*xt^2+c*xt");
+            Edge(3) = gmt_Edge("Electrical Losses","R*xt^2");
+            % Edge(5) = gmt_Edge("Electrical Input","1*xt*xh");
+            % Edge(6) = gmt_Edge("Mechanical Output","1*xt*xh");
 
             % Define Edge Matrix
             EdgeMatrix = [1  2; ...
@@ -31,20 +31,19 @@ classdef gmt_DCMotor < gmt_Graph
                           ];
 
             % Define Default Model Parameterization 
-            Param(1) = gmt_ModelParameter("Rotational Inertia","J",1,[]);
-            Param(2) = gmt_ModelParameter("DC Motor Specific Heat","Cp",1,[]);
-            Param(3) = gmt_ModelParameter("Motor Inductance","L",1,[]);
-            Param(4) = gmt_ModelParameter("Friction Coefficient b","b",1,[]);
-            Param(5) = gmt_ModelParameter("Friction Coefficient b","c",1,[]);
-            Param(6) = gmt_ModelParameter("Motor Armature Resistance","R",1,[]);
-            Param(7) = gmt_ModelParameter("Motor Torque Constant","Kt",1,[]);
+            Parameter(1) = gmt_Parameter("Rotational Inertia","J",1);
+            Parameter(2) = gmt_Parameter("DC Motor Specific Heat","Cp",1);
+            Parameter(3) = gmt_Parameter("Motor Inductance","L",1);
+            Parameter(4) = gmt_Parameter("Friction Coefficient b","b",1);
+            Parameter(5) = gmt_Parameter("Friction Coefficient b","c",1);
+            Parameter(6) = gmt_Parameter("Motor Armature Resistance","R",1);
+            Parameter(7) = gmt_Parameter("Motor Torque Constant","Kt",1);
 
-            % Creates an Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edges,Vertices,Param);
+            % Define Connection Port Object Array 
+            Port(1) = gmt_Port("VertexConnection",2,"Mechanical");
 
-            % Define Available Connection Ports 
-            % Define Connection Ports 
-            obj.Ports(1) = gmt_ConnectionPort(obj,"VertexConnection",2,"Mechanical");
+            % Creates DC Motor Object 
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,[],Port,varargin{:});
 
         end
     end
