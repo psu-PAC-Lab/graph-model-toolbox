@@ -12,26 +12,26 @@ classdef gmt_SplitJunction < gmt_Graph
         %% Constructor Method
         function obj = gmt_SplitJunction(ObjectName,n_in,n_out,varargin)
 
-            Vertex(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*Rho*x_dot");
+            Vertex(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*Rho*x_dot","units","K");
             
             % Define Vertices 
             for i = 1:n_in
-                VertexName_tmp = 'Inlet_' + string(i);
-                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External",true);
+                VertexName_tmp = 'Source Temperature' + string(i);
+                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"x","External",true,"units","K");
             end
 
             for i = n_in+1:n_in+n_out
-                VertexName_tmp = 'Outlet_' + string(i);
-                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"cp_f*V*Rho*x_dot","External",true);
+                VertexName_tmp = 'Sink Temperature' + string(i);
+                Vertex(i+1) = gmt_Vertex(VertexName_tmp,"x","External",true,"units","K");
             end
 
             % Define Edges and Inputs
             for i = 1:(n_in+n_out)
                 if i <= n_in
-                    EdgeName_tmp = 'Inflow_' + string(i);
+                    EdgeName_tmp = 'Inlet Advection ' + string(i);
                     InputName_tmp = "Inlet Mass Flow " + string(i);
                 else
-                    EdgeName_tmp = 'Outflow_' + string(i-n_in);
+                    EdgeName_tmp = 'Outlet Advection ' + string(i-n_in);
                     InputName_tmp = "Outlet Mass Flow " + string(i-n_in);
                 end
                 Input_tmp = "u" + string(i);
@@ -50,8 +50,12 @@ classdef gmt_SplitJunction < gmt_Graph
             Parameter(3) = gmt_Parameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
 
             % Define Available Connection Ports
-            for i = 1:length(Edge)
-                Port(i) = gmt_Port("EdgeConnection",i,"Thermal");
+            NumEdges = length(Edge);
+            NumVertices = length(Vertex);
+            PortNum = 1;
+            for i = 1:NumEdges
+                Port(PortNum) = gmt_Port("EdgeConnection",i,"Thermal");
+                PortNum = PortNum + 1;
             end
 
             % Creates Split Junction Object 

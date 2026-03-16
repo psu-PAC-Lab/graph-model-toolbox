@@ -39,9 +39,9 @@ classdef gmt_Port
             obj.ParentName = ParentObj.Name;
             
             if obj.PortType == gmt_PortType.EdgeConnection
-                assert(ParentObj.Properties.Ne >= obj.ElementNumber, "Invalid element number specified")
+                assert(obj.ElementNumber <= ParentObj.Properties.Ne, "Invalid element number specified")
             else
-                assert(ParentObj.Properties.Nv >= obj.ElementNumber, "Invalid element number specified")
+                assert(obj.ElementNumber <= ParentObj.Properties.Nv, "Invalid element number specified")
             end
             
             if obj.PortType == gmt_PortType.EdgeConnection

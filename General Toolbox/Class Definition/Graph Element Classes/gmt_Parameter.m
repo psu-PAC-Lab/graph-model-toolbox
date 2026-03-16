@@ -9,11 +9,12 @@ classdef gmt_Parameter
         Common logical = false
         Optimization logical = false
         Units string
-        Data 
+        Data = []
     end
 
     properties (SetAccess = protected) 
         ParameterType gmt_ParameterType
+        Expression logical = false
         Parent string
         lookupVars string
         lookupDim 
@@ -50,6 +51,10 @@ classdef gmt_Parameter
                 obj.Optimization = p.Results.Optimization;
             end
 
+            if contains(Variable,"=")
+                obj.Expression = true;
+            end
+
             % Determine Parameter Type
             switch true 
 
@@ -64,10 +69,11 @@ classdef gmt_Parameter
                     else
                         obj.lookupDim = lookupDim_tmp;
                     end
-                       
-                    obj.Data = Data;
-
-                    obj.lookupVars = string(fieldnames(obj.Data));
+                     
+                    if ~isempty(Data)
+                        obj.Data = Data;
+                        obj.lookupVars = string(fieldnames(obj.Data));
+                    end
 
                     % if ~isempty(Opts)
                     %     obj.TableOpts = Opts;

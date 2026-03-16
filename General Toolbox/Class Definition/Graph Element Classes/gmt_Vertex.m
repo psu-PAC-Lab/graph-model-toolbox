@@ -25,14 +25,14 @@ classdef gmt_Vertex
         NvU (1,1) double = 0 % Number of control inputs within vertex
         NvY (1,1) double = 0 % Number of outputs within vertex
         Capacitance string = []% Internally computed capacitance based on user defined capacitance equation
-        ComponentStateVariable string = [] % List of algebraic state variables defiend in capacitance equation that are part of the graph but are user defined
+        ComponentStateVariable string = "" % List of algebraic state variables defiend in capacitance equation that are part of the graph but are user defined
         StateVariables string = [] % List of algebraic and dynamic state variables defiend in capacitance equation 
         StateDerVariables string = [] % List of dynamic state variables defined in capacitance equation 
         InputVariables string = [] % List of input variables defined in capacitance equation
         OutputVariables string = [] % List of output variables defined in capacitance equation 
         ParameterVariables string = [] % List of parameter variables defined in capacitance equation 
         % External Meta Data - Auto-Generated based On EdgeMatrix and Edge Objects i.e. a graph model must be defined to define these variables
-        GraphDisturbanceType string = "unassigned" % Auto-generated based incidence matrix;
+        %GraphDisturbanceType string = "unassigned" % Auto-generated based incidence matrix;
         GraphStateVariables string = [] % Auto-generated list of state variables based on graph model
         GraphStateDerVariables string = [] % Auto-generated list of state derivative variables based on graph model
         GraphOutputVariables string = [] % Auto-generated list of output variables based on graph model
@@ -182,10 +182,10 @@ classdef gmt_Vertex
             end
 
             % Number of Outputs Determination
-            if obj.StateType == gmt_StateType.Algebraic 
-                obj.NvY = 1;
-                obj.OutputVariables = "y";
-            end
+            % if obj.StateType == gmt_StateType.Algebraic 
+            %     obj.NvY = 1;
+            %     obj.OutputVariables = "y";
+            % end
 
             % Vertex Capacitance 
             if obj.StateType == gmt_StateType.Dynamic 
@@ -260,9 +260,9 @@ classdef gmt_Vertex
         end
 
         % Updates Disturbance Type
-        function obj = gmt_VertexDisturanceType(obj,DisturbanceType)
-            obj.GraphDisturbanceType = DisturbanceType;
-        end
+        % function obj = gmt_VertexDisturanceType(obj,DisturbanceType)
+        %     obj.GraphDisturbanceType = DisturbanceType;
+        % end
 
     end
 end

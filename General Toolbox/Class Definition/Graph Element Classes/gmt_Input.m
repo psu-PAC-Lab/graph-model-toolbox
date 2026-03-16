@@ -10,10 +10,11 @@ classdef gmt_Input
         Description string 
         Dependency 
         DependencyFormula
-        Units 
+        Units string = "unassigned"
     end
 
     properties (GetAccess = public, SetAccess = private)
+        Parent
         GraphVariableName string
         GraphDescription string
     end
@@ -60,6 +61,13 @@ classdef gmt_Input
                 obj.GraphDescription = obj.Description;
             end
 
+        end
+        
+        %% Assign Parent Obj
+        function obj = gmt_InputParent(obj,ParentObj)
+
+            obj.Parent = ParentObj.Name;
+    
         end
 
     end

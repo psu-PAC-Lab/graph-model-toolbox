@@ -10,7 +10,19 @@ RecirTank = gmt_Tank("RecirTank");
 EngineSplit = gmt_SplitJunction("EngineSplit",1,2);
 TankSplit = gmt_SplitJunction("TankSplit",2,1);
 
-% Combine Each Component 
+% % Combine Each Component 
+% PrimaryObj = {MainTank; TankSplit; RecirTank; CoolerLoad; EngineSplit; HeatLoad;};
+% SecondaryObj = {TankSplit; RecirTank; CoolerLoad; EngineSplit; HeatLoad; TankSplit;};
+% PortArray = [2, 1; 2, 2; 1, 2; 1, 2; 1, 2; 3, 1];
+% 
+% FilePath = "C:\Users\jmp8430\Documents\Research\Practice System Modeling";
+% FuelSystem = gmt_Graph.gmt_Combine("FuelSystem",PrimaryObj,SecondaryObj,PortArray,"BuildSim",FilePath);
+% % SubSysB = gmt_Graph.gmt_CombineSimple(SubSysA,RecirTank,[4, 2]);
+% % SubSysC = gmt_Graph.gmt_CombineSimple(SubSysB,CoolerLoad,[5, 2]);
+% % SubSysD = gmt_Graph.gmt_CombineSimple(SubSysC,EngineSplit,[6, 2]);
+% % SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[7, 2]);
+% % SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 8]);
+
 SubSysA = gmt_Graph.gmt_CombineSimple(MainTank,TankSplit,[2, 1]);
 SubSysB = gmt_Graph.gmt_CombineSimple(SubSysA,RecirTank,[4, 2]);
 SubSysC = gmt_Graph.gmt_CombineSimple(SubSysB,CoolerLoad,[5, 2]);
@@ -18,8 +30,15 @@ SubSysD = gmt_Graph.gmt_CombineSimple(SubSysC,EngineSplit,[6, 2]);
 SubSysE = gmt_Graph.gmt_CombineSimple(SubSysD,HeatLoad,[7, 2]);
 SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 8]);
 
-% Match Inputs 
-% Ask Chris and Phil about automatic to join inputs
+% SubSysA = gmt_Graph.gmt_CombineSimple(MainTank,TankSplit,[2, 1]);
+% SubSysB = gmt_Graph.gmt_CombineSimple(TankSplit,RecirTank,[4, 2]);
+% SubSysC = gmt_Graph.gmt_CombineSimple(RecirTank,CoolerLoad,[5, 2]);
+% SubSysD = gmt_Graph.gmt_CombineSimple(CoolerLoad,EngineSplit,[6, 2]);
+% SubSysE = gmt_Graph.gmt_CombineSimple(EngineSplit,HeatLoad,[7, 2]);
+% SysFin = gmt_Graph.gmt_CombineSys(SubSysE,[4, 8]);
+
+
+% % Match Inputs 
 InputMatching = ...
 [ "u4", "(u2+u6)"; ...
   "u3", "u6"; ...
@@ -28,7 +47,8 @@ InputMatching = ...
   "u10", "(u2+u6-u5)"];   
 
 % Update Model W/ Matched Inputs
-Combine = SysFin.gmt_InputCommon(InputMatching,"BuildSim","C:\Users\jmp8430\Documents\Research\Practice System Modeling");
+pathname = "C:\Users\jmp8430\Documents\Research\GraphModel_ToolboxV2\doc";
+Combine = SysFin.gmt_InputCommon(InputMatching,"BuildSim",pathname);
 
 % Plot Graph
 Combine.gmt_PlotGraph
