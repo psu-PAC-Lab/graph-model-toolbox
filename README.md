@@ -55,7 +55,7 @@ The toolbox includes pre-built component models, each implemented as a subclass 
 | `gmt_Tank` | Thermal - Single Phase |Fluid Storage Tank|
 | `gmt_HeatLoad` | Thermal - Single Phase | Fluid Heat Load Junction |
 | `gmt_HeatExchanger` | Thermal - Single Phase | Single Wall Heat Exchanger|
-| `gmt_SplitJunction(Name, nIn, nOut)` | Thermal - Single Phase | Configurable Fluid Junction |
+| `gmt_SplitJunction` | Thermal - Single Phase | Configurable Fluid Junction |
 | `gmt_DCMotor` | Electrical | DC Motor Thermal & Electrical |
 | `gmt_Inverter` | Electrical | Inverter Thermal & Electrical |
 | `gmt_Battery` | Electrical | Battery Thermal & Electrical W/ Built-In Configurations |
