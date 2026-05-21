@@ -1,6 +1,6 @@
 classdef gmt_Properties 
 
-    properties (Hidden)
+    properties 
         M  double % Incident Matrix 
         Nv double % Number of vertices 
         Ne double % Number of edges
