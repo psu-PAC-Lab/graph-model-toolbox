@@ -191,11 +191,15 @@ Full documentation is available in the repository Wiki:
 
 [1] D. B. Doman, "Fuel flow control for extending aircraft thermal endurance part I: underlying principles," in *AIAA SciTech 2016 Forum*, San Diego, CA, USA, Jan. 2016.
 
-## Contributors
+## Code Base Contributors
 
 | Name | Affiliation |
 |------|-------------|
-| [Your Name] | [Your Institution] |
+| Joseph Pisani | Penn State University |
+| Hershcel Pangborn  | Penn State University |
+| Jacoab Siefert  | Penn State University | 
+| Christopher Askland | University of Illinois Urbana-Champaign |
+| Philip Renkert | University of Illinois Urbana-Champaign |
 
 ## Citation
 
