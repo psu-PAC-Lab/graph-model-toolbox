@@ -196,8 +196,8 @@ Full documentation is available in the repository Wiki:
 | Name | Affiliation |
 |------|-------------|
 | Joseph Pisani | Penn State University |
-| Hershcel Pangborn  | Penn State University |
-| Jacoab Siefert  | Penn State University | 
+| Herschel Pangborn  | Penn State University |
+| Jacob Siefert  | Penn State University | 
 | Christopher Askland | University of Illinois Urbana-Champaign |
 | Philip Renkert | University of Illinois Urbana-Champaign |
 
