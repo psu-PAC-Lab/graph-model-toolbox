@@ -1,6 +1,6 @@
 # GMT — Graph-Based Modeling Toolbox
 
-A MATLAB toolbox for energy component and system modeling using a directed graph formalism. The toolbox represents energy systems as directed graphs, automatically derives symbolic system equations, and generates simulation-ready MATLAB code. An optional Simulink block is provided for users who prefer a graphical modeling interface.
+A MATLAB toolbox for energy component and system modeling using a directed graph formalism. The toolbox represents energy systems as directed graphs, automatically derives symbolic system equations, and generates simulation-ready MATLAB code. An optional Simulink block is provided for users who prefer a graphical user interface.
 
 ## Overview
 
@@ -205,9 +205,7 @@ Full documentation is available in the repository Wiki:
 
 Use of this toolbox in published research should be cited as follows:
 
-```
-[Your citation here]
-```
+J. M. Pisani, C. T. Aksland, P. M. Renkert, J. Broniszewski, V. Vyas, A. G. Alleyne, D. J. Docimo, J. P. Koeln, N. Jain, H. C. Pangborn, "Graph-based modeling, control, and optimization for multi-domain and multi-timescale energy systems", 2026, arXiv:2605.27017
 
 ## License
 
