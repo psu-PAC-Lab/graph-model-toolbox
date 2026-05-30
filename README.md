@@ -2,6 +2,8 @@
 
 A MATLAB toolbox for energy component and system modeling using a directed graph formalism. The toolbox represents energy systems as directed graphs, automatically derives symbolic system equations, and generates simulation-ready MATLAB code. An optional Simulink block is provided for users who prefer a graphical user interface.
 
+A presentation with more information about graph-based modeling and a brief overview of this tolbox can be viewed [here](https://youtu.be/TpXZDiVxeqc), recorded from a tutorial session at the 2026 American Control Conference.  
+
 ## Overview
 
 GMT models dynamical energy systems using a graph formalism where **vertices** represent energy storage elements (states) and **edges** represent power flows between them. From the graph topology, edge, vertex, parameter, input, and port defintions the toolbox automatically derives symbolic expressions for the system equations. Component models can be created individually and then combined into full system models through port connections.
@@ -205,8 +207,12 @@ Full documentation is available in the repository Wiki:
 
 Use of this toolbox in published research should be cited as follows:
 
-J. M. Pisani, C. T. Aksland, P. M. Renkert, J. Broniszewski, V. Vyas, A. G. Alleyne, D. J. Docimo, J. P. Koeln, N. Jain, H. C. Pangborn, "Graph-based modeling, control, and optimization for multi-domain and multi-timescale energy systems", 2026, arXiv:2605.27017
+J. M. Pisani, C. T. Aksland, P. M. Renkert, J. Broniszewski, V. Vyas, A. G. Alleyne, D. J. Docimo, J. P. Koeln, N. Jain, H. C. Pangborn, "Graph-based modeling, control, and optimization for multi-domain and multi-timescale energy systems," American Control Conference, 2026. ([arXiv](https://doi.org/10.48550/arXiv.2605.27017))
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## Acknowledgment
+
+The development of this toolbox was supported by the Office of Naval Research under Award N000142512051. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the Office of Naval Research.
