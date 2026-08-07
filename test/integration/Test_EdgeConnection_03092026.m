@@ -38,26 +38,30 @@ PortArray = ...
      1, 3];
 
 FilePath = string(pwd);
-FuelSystem = gmt_Graph.gmt_Combine("FuelSystem",ObjectArray,PortArray);
+FTMS = gmt_Graph.gmt_Combine("FTMS",ObjectArray,PortArray);
 
 % Match Inputs 
 InputMatching = ...
 [ "u2", "u5"; ...
-  "u5", "(u7+u9)"; ...
   "u1", "u8"; ...
-  "u4", "(u5-u8)"];
+  "u4", "(u5-u8)"; ...
+  "u5", "(u7+u9)"
+  ];
 
 % Update Model W/ Matched Inputs
-FuelSystem = FuelSystem.gmt_InputCommon(InputMatching,"BuildSim",FilePath);
+FTMS = FTMS.gmt_InputCommon(InputMatching);
+
+% Algebraic State Conversion
+FTMS = gmt_Algebraic(FTMS,[1,5,16],"BuildSim",FilePath);
 
 % Plot Graph
-FuelSystem.gmt_PlotGraph
+FTMS.gmt_PlotGraph
 
 % Generate Graph Report
-FuelSystem.gmt_ReportFull
+FTMS.gmt_ReportFull
 toc
 
-[A, B, Z] = FuelSystem.gmt_ControlModel("Simplify",true,"NumSub",true);
+%[A, B, Z] = FuelSystem.gmt_ControlModel("Simplify",true,"NumSub",true);
 % 
 % Afun = 
 % Bfun = 

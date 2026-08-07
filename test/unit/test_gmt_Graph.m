@@ -107,7 +107,8 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
             Eb2 = gmt_Edge("Drain", "Cd*Ab*sqrt(xh)");
             EMb = [3,1; 1,2];
             Pb  = [gmt_Parameter("Tank B Cap", "Cb", 2e-10), ...
-                   gmt_Parameter("Orifice B",  "Ab", 5e-5)];
+                   gmt_Parameter("Orifice B",  "Ab", 5e-5), ...
+                   gmt_Parameter("Discharge Coeff", "Cd", 0.62, "Common", true)];
             Ub3 = gmt_Input("u3", "Drain ref",  "Units", "kg/s");
             Ub4 = gmt_Input("u4", "Inlet ref",  "Units", "kg/s");
             PortB = gmt_Port("EdgeConnection", 1, "Hydraulic");
@@ -201,8 +202,8 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
             E2 = gmt_Edge("Drain",  "Cd*sqrt(xh)");
             EM = [2,1; 1,2];
             data.xTable = [0,1,2]; data.yTable = [0,0.5,1.0];
-            P  = [gmt_Parameter("C",    "C",    1e-10), ...
-                  gmt_Parameter("Lkup", "interp1(xTable,yTable,u)", data)];
+            P  = [gmt_Parameter("C",    "Cd",    1e-10), ...
+                  gmt_Parameter("Lkup", "C = interp1(xTable,yTable,u)", data)];
             U  = gmt_Input("u","Flow");
             m  = gmt_Graph("M", EM, [E1,E2], [V1,V2], P, [U], []);
             tc.assertEqual(char(m.ModelMetadata.ModelType), 'Numerical')
@@ -239,32 +240,41 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
     %% ── 4. gmt_ControlModel ──────────────────────────────────────────────────
     methods (Test, TestTags={'ControlModel'})
 
-        function test_controlModelReturnsThreeOutputs(tc)
+        function test_controlModelBase(tc)
             [A,B,Z] = tc.model.gmt_ControlModel();
             tc.assertTrue(isa(A,'sym'))
             tc.assertTrue(isa(B,'sym'))
             tc.assertTrue(isa(Z,'sym'))
         end
 
-        function test_controlModelAMatrixIsSymbolic(tc)
-            [A,~,~] = tc.model.gmt_ControlModel();
-            tc.assertTrue(isa(A,'sym'))
-        end
-
-        function test_controlModelBMatrixIsSymbolic(tc)
-            [~,B,~] = tc.model.gmt_ControlModel();
-            tc.assertTrue(isa(B,'sym'))
-        end
-
-        function test_controlModelNumSubReturnsResult(tc)
+        function test_controlModelNumSub(tc)
             [A,B,Z] = tc.model.gmt_ControlModel("NumSub", true);
-            tc.assertNotEmpty(A); tc.assertNotEmpty(B); tc.assertNotEmpty(Z)
+            tc.assertTrue(isa(A,'sym'))
+            tc.assertTrue(isa(B,'sym'))
+            tc.assertTrue(isa(Z,'sym'))
         end
 
-        function test_controlModelDiscreteOption(tc)
-            [Ad,Bd,~] = tc.model.gmt_ControlModel("NumSub", true, "Discrete", 0.01);
-            tc.assertNotEmpty(Ad); tc.assertNotEmpty(Bd)
+        function test_controlModelSimplify(tc)
+            [A,B,Z] = tc.model.gmt_ControlModel("Simplify", true);
+            tc.assertTrue(isa(A,'sym'))
+            tc.assertTrue(isa(B,'sym'))
+            tc.assertTrue(isa(Z,'sym'))
         end
+
+        function test_controlModelDiscrete(tc)
+            [A,B,Z] = tc.model.gmt_ControlModel("Discrete", 0.10);
+            tc.assertTrue(isa(A,'sym'))
+            tc.assertTrue(isa(B,'sym'))
+            tc.assertTrue(isa(Z,'sym'))
+        end
+
+        function test_controlModelDiscreteType(tc)
+            [A,B,Z] = tc.model.gmt_ControlModel("Discrete", 0.10,"DiscreteType","ForwardEuler");
+            tc.assertTrue(isa(A,'sym'))
+            tc.assertTrue(isa(B,'sym'))
+            tc.assertTrue(isa(Z,'sym'))
+        end
+
 
         function test_controlModelNumericalModelErrors(tc)
             V1 = gmt_Vertex("P","C*x_dot");
@@ -274,7 +284,7 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
             EM = [2,1; 1,2];
             data.x=[0,1]; data.y=[0,1];
             P  = [gmt_Parameter("C","C",1e-10), ...
-                  gmt_Parameter("Lkup","interp1(x,y,u)",data)];
+                  gmt_Parameter("Lkup", "Cd = interp1(xTable,yTable,u)", data)];
             U  = gmt_Input("u","Flow");
             m  = gmt_Graph("M",EM,[E1,E2],[V1,V2],P,[U],[]);
             tc.assertError(@() m.gmt_ControlModel("NumSub",true), '')
@@ -346,9 +356,9 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
     methods (Test, TestTags={'ParamCommon'})
 
         function test_paramCommonRemovesOldVariable(tc)
-            MainTank = gmt_Tank("MainTank");
+            EngSplit = gmt_SplitJunction("EngSplit",2,1);  
             TankSplit = gmt_SplitJunction("TankSplit",2,1);  
-            sys = gmt_Graph.gmt_Combine("Sys", {{MainTank},{TankSplit}}, [2,1]);
+            sys = gmt_Graph.gmt_Combine("Sys", {{EngSplit},{TankSplit}}, [3,1]);
             sys = sys.gmt_ParamCommon(["V_1","V_2"]);
             tc.assertFalse(any(strcmp([sys.ModelParameters.Variable],'V_1')))
         end
@@ -459,5 +469,39 @@ classdef test_gmt_Graph < matlab.unittest.TestCase
         end
 
     end
+
+    %% Plotting Check 
+    methods (Test, TestTags={'Plot'})
+
+        function test_PlotGraph_noOpts(tc)
+            MainTank = gmt_Tank("MainTank");
+            set(0,'DefaultFigureVisible','off');
+            tc.assertWarningFree(@() MainTank.gmt_PlotGraph)
+            set(0,'DefaultFigureVisible','on');
+        end
+
+        function test_PlotGraph_simpOpts(tc)
+            MainTank = gmt_Tank("MainTank");
+            set(0,'DefaultFigureVisible','off');
+            tc.assertWarningFree(@() MainTank.gmt_PlotGraph('SimplifyLabels',true))
+            set(0,'DefaultFigureVisible','on');
+        end
+
+        function test_PlotGraph_edgeOpts(tc)
+            MainTank = gmt_Tank("MainTank");
+            set(0,'DefaultFigureVisible','off');
+            tc.assertWarningFree(@() MainTank.gmt_PlotGraph('EdgeLabelsOnly',true))
+            set(0,'DefaultFigureVisible','on');
+        end
+
+        function test_PlotGraph_vertexOpts(tc)
+            MainTank = gmt_Tank("MainTank");
+            set(0,'DefaultFigureVisible','off');
+            tc.assertWarningFree(@() MainTank.gmt_PlotGraph('VertexLabelsOnly',true))
+            set(0,'DefaultFigureVisible','on');
+        end
+
+    end
+
 
 end

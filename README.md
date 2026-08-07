@@ -21,10 +21,11 @@ Key capabilities:
 
 ## Requirements
 
-- MATLAB R2025b. Backwards compatibility is handled by the toolbox package.
+- MATLAB R2025b. Main toolbox functions are backwards compatible using toolbox package.
 - Symbolic Math Toolbox
 - Simulink Stateflow
-- Verified on macOS and Windows.
+- Verified on macOS and Windows
+- <b> Note: Simulink library block requires MATLAB R2023a </b>
 
 ## Installation
 
@@ -56,13 +57,15 @@ The toolbox includes pre-built component models, each implemented as a subclass 
 |-----------|----------------------|-------------|
 | `gmt_Tank` | Thermal - Single Phase |Fluid Storage Tank|
 | `gmt_HeatLoad` | Thermal - Single Phase | Fluid Heat Load Junction |
+| `gmt_ColdPlate` | Thermal - Single Phase | Fluid Cold Plate Heat Exchanger |
 | `gmt_HeatExchanger` | Thermal - Single Phase | Single Wall Heat Exchanger|
 | `gmt_SplitJunction` | Thermal - Single Phase | Configurable Fluid Junction |
 | `gmt_DCMotor` | Electrical | DC Motor Thermal & Electrical |
 | `gmt_Inverter` | Electrical | Inverter Thermal & Electrical |
 | `gmt_Battery` | Electrical | Battery Thermal & Electrical W/ Built-In Configurations |
+| `gmt_ElectricalBus` | Electrical | Electrical Power Distribution Bus |
 
-> **Note:** The component library is under active development. Additional components will be added over time.
+> <b> **Note:** The component library is under active development. Additional components will be added over time. </b>
 
 Instantiate a component directly using its name. As a best practice, the workspace object name should match the component description name.
 
@@ -208,6 +211,16 @@ Full documentation is available in the repository Wiki:
 Use of this toolbox in published research should be cited as follows:
 
 J. M. Pisani, C. T. Aksland, P. M. Renkert, J. Broniszewski, V. Vyas, A. G. Alleyne, D. J. Docimo, J. P. Koeln, N. Jain, H. C. Pangborn, "Graph-based modeling, control, and optimization for multi-domain and multi-timescale energy systems," American Control Conference, 2026. ([arXiv](https://doi.org/10.48550/arXiv.2605.27017))
+
+## Latest Release (v1.3.0)
+
+**Released:** June 5, 2026
+
+### Highlights
+
+- Fixed minor issues related to edge labeling, unit labeling, and unused parameters
+- Updated Simulink library block for backward compatibility up to MATLAB R2023a
+- Introduced new cold plate and electrical bus component models
 
 ## License
 

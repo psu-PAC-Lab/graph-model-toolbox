@@ -1,5 +1,5 @@
 %% gmt_HeatExchanger
-% Defines a heat exchanger model 
+% Defines a heat exchanger model cpf_arho_a
 % Two plates, no wall
 
 %% Class Defintion and Superclass Reference
@@ -14,8 +14,8 @@ classdef gmt_HeatExchanger < gmt_Graph
         function obj = gmt_HeatExchanger(ObjectName,varargin)
 
             % Define Vertex 
-            Vertex(1) = gmt_Vertex("Temperature - Fluid A","cpf_a*V_a*Rho_a*x_dot","units","K");
-            Vertex(2) = gmt_Vertex("Temperature - Fluid B","cpf_b*V_b*Rho_b*x_dot","units","K");
+            Vertex(1) = gmt_Vertex("Temperature - Fluid A","cp_f_a*V_a*rho_f_a*x_dot","units","K");
+            Vertex(2) = gmt_Vertex("Temperature - Fluid B","cp_f_b*V_b*rho_f_b*x_dot","units","K");
             Vertex(3) = gmt_Vertex("Wall Temperature","cp_w*(rho_w*l_w*((A_a+A_b)/2))*x_dot","units","K");
             Vertex(4) = gmt_Vertex("Source Temperature - Fluid A","x","External",true,"units","K");
             Vertex(5) = gmt_Vertex("Source Temperature - Fluid B","x","External",true,"units","K");
@@ -23,10 +23,10 @@ classdef gmt_HeatExchanger < gmt_Graph
             Vertex(7) = gmt_Vertex("Sink Temperature - Fluid B","x","External",true,"units","K");
 
             % Define Edge 
-            Edge(1) = gmt_Edge("Inlet Heat Advection - Fluid A","cpf_a*u1*xt");
-            Edge(2) = gmt_Edge("Inlet Heat Advection - Fluid B","cpf_b*u2*xt");
-            Edge(3) = gmt_Edge("Outlet Heat Advection - Fluid A","cpf_a*u1*xt");
-            Edge(4) = gmt_Edge("Outlet Heat Advection - Fluid B","cpf_b*u2*xt");
+            Edge(1) = gmt_Edge("Inlet Heat Advection - Fluid A","cp_f_a*u1*xt");
+            Edge(2) = gmt_Edge("Inlet Heat Advection - Fluid B","cp_f_b*u2*xt");
+            Edge(3) = gmt_Edge("Outlet Heat Advection - Fluid A","cp_f_a*u1*xt");
+            Edge(4) = gmt_Edge("Outlet Heat Advection - Fluid B","cp_f_b*u2*xt");
             Edge(5) = gmt_Edge("Wall Conduction - Fluid A","h_a*A_a*(xt-xh)");
             Edge(6) = gmt_Edge("Wall Conduction - Fluid B","h_b*A_b*(xt-xh)");
 
@@ -39,14 +39,14 @@ classdef gmt_HeatExchanger < gmt_Graph
                           2, 3];
 
             % Define Default Model Parameterization 
-            Parameter(1) = gmt_Parameter("Specific Heat - Fluid A","cpf_a",2250,"units","J/(kg*K)","Common",true);
-            Parameter(2) = gmt_Parameter("Specific Heat - Fluid B","cpf_b",1005,"units","J/(kg*K)","Common",true);
+            Parameter(1) = gmt_Parameter("Specific Heat - Fluid A","cp_f_a",2250,"units","J/(kg*K)","Common",true);
+            Parameter(2) = gmt_Parameter("Specific Heat - Fluid B","cp_f_b",1005,"units","J/(kg*K)","Common",true);
             Parameter(3) = gmt_Parameter("Wall Area - Fluid A","A_a",1,"units","m^2");
             Parameter(4) = gmt_Parameter("Wall Area - Fluid B","A_b",1,"units","m^2)");
             Parameter(5) = gmt_Parameter("Heat Transfer Coefficient - Fluid A","h_a",1,"units","W/(m^2*K)");
             Parameter(6) = gmt_Parameter("Heat Transfer Coefficient - Fluid B","h_b",1,"units","W/(m^2*K)");
-            Parameter(7) = gmt_Parameter("Density - Fluid A","Rho_a",840,"Units","kg/(m^3)","Common",true);
-            Parameter(8) = gmt_Parameter("Density - Fluid B","Rho_b",1090,"Units","kg/(m^3)","Common",true);
+            Parameter(7) = gmt_Parameter("Density - Fluid A","rho_f_a",840,"Units","kg/(m^3)","Common",true);
+            Parameter(8) = gmt_Parameter("Density - Fluid B","rho_f_b",1090,"Units","kg/(m^3)","Common",true);
             Parameter(9) = gmt_Parameter("Volume - Fluid A","V_a",0.01,"Units","m^3");
             Parameter(10) = gmt_Parameter("Volume - Fluid B","V_b",0.01,"Units","m^3");
             Parameter(11) = gmt_Parameter("Wall Heat Capacity","cp_w",900,"Units","J/(kg*K)");

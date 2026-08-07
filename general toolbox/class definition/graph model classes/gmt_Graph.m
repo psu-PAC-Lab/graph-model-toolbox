@@ -232,9 +232,22 @@ classdef gmt_Graph
                 % Update User Specified Data
                 if ~isempty(params.ModelParameters)
                     default_vars = [ParameterArray.Variable]';
+                    defaultContainsExp  = contains(default_vars,"=");
+
+                    if any(defaultContainsExp)
+                        default_vars(defaultContainsExp) = strtrim(extractBefore(default_vars(defaultContainsExp),"="));
+                    end
+                    
                     user_vars = [params.ModelParameters.Variable]';
+                    userContainsExp  = contains(user_vars,"=");
+
+                    if any(userContainsExp)
+                        user_vars(userContainsExp) = strtrim(extractBefore(user_vars(userContainsExp),"="));
+                    end
+
                     vars_diff = setdiff(default_vars,user_vars);
-                    assert(isempty(vars_diff),"user has not specified all variables for user defined parameterization")
+                    vars_diff2 = setdiff(user_vars,default_vars);
+                    assert(isempty(vars_diff),"User did not define [%s] variable(s) as parameter(s)\nUser defined [%s] variables(s) as parameters(s)",join(vars_diff,", "), join(vars_diff2,", "))
                     obj.ModelParameters = params.ModelParameters;
                 else
                     obj.ModelParameters = ParameterArray;
@@ -279,7 +292,6 @@ classdef gmt_Graph
 
             % If Requested, Add Initial Conditions
             if AddInitCons
-                assert(obj.Properties.Ns == size(params.InitCon,2),"Number of initial conditions does not match number of states")
                 obj = gmt_InitCon(obj,params.InitCon);
             end
 
@@ -299,47 +311,74 @@ classdef gmt_Graph
             addParameter(p, 'Simplify',false, @(x) islogical(x) && isscalar(x));
             addParameter(p, 'NumSub',false, @(x) islogical(x) && isscalar(x));
             addParameter(p, 'Discrete',[], @(x) isnumeric(x) && isscalar(x));
+            addParameter(p, 'DiscreteType',[], @(x) mustBeMember(x, {'ForwardEuler', 'RK4'}))
             parse(p, varargin{:});
 
-            % Create Symbolic System of Equations
-            if p.Results.NumSub
-                assert(obj.ModelMetadata.ModelType == gmtEnumE.gmt_ModelType.Analytical,"Numerical substition on available for analytical models")
-                SysEqn = symfun(obj.SystemEquationsSubs.RHS,sym([obj.States,obj.Inputs]));
-            else
-                SysEqn = symfun(obj.SystemEquations.RHS,sym([obj.States,obj.Inputs]));
+            % Variable Hand-Off
+            numSubFlg = p.Results.NumSub;
+            simplifyFlg = p.Results.Simplify;
+            dt = p.Results.Discrete;
+            discreteFlg = ~isempty(dt);
+            discreteType = p.Results.DiscreteType;
+            inputsFlg = ~isempty([obj.Inputs]);
+
+            % Data Validation 
+            analyticalModelFlg = (obj.ModelMetadata.ModelType == gmtEnumE.gmt_ModelType.Analytical);
+            discreteMismatchFlg = ~(~discreteFlg && ~isempty(discreteType));
+            assert(analyticalModelFlg,"Linearization and discretization only supported ")
+            assert(discreteMismatchFlg,"Discretization type specified without discretization rate")
+
+            % Update Discretization Type
+           if isempty(discreteType)
+                discreteType = "FowardEuler";
             end
 
-            if p.Results.Simplify 
-                A = simplify(jacobian(SysEqn,[sym([obj.States])]));
-                B = simplify(jacobian(SysEqn,[sym([obj.Inputs])]));
-            else
-                A = jacobian(SysEqn,[sym([obj.States])]);
-                B = jacobian(SysEqn,[sym([obj.Inputs])]);
+            % Symbolic System of Equations 
+            switch numSubFlg
+                case 0 
+                    SysEqn = symfun(obj.SystemEquations.RHS,sym([obj.States,obj.Inputs]));
+                case 1
+                    SysEqn = symfun(obj.SystemEquationsSubs.RHS,sym([obj.States,obj.Inputs]));
             end
 
-            if ~isempty([obj.Inputs])
-                Z = SysEqn - A*sym([obj.States]).' - B*sym([obj.Inputs]).';
-            else
-                Z = SysEqn - A*sym([obj.States]).';
+            % Linearized Jacobian 
+            switch simplifyFlg
+                case 0 
+                    A = jacobian(SysEqn,[sym([obj.States])]);
+                    B = jacobian(SysEqn,[sym([obj.Inputs])]);
+                case 1 
+                    A = simplify(jacobian(SysEqn,[sym([obj.States])]));
+                    B = simplify(jacobian(SysEqn,[sym([obj.Inputs])]));
             end
 
-            if ~isempty(p.Results.Discrete)
-                dt = p.Results.Discrete;
-                A = exp(A*dt);
-                syms tau
-                B = int(exp(A*tau)*B,tau,0,dt);
-
-            end       
+            % Affine Term Computation 
+            switch inputsFlg
+                case 0
+                    Z = SysEqn - A*sym([obj.States]).';
+                case 1 
+                    Z = SysEqn - A*sym([obj.States]).' - B*sym([obj.Inputs]).';
+            end
+            
+            % Discretization 
+            if discreteFlg
+                switch discreteType
+                    case "FowardEuler"
+                        n = size(A,1);
+                        A = eye(n) + A*dt; 
+                        B = B*dt;
+                        Z = Z*dt;
+                    case "RK4"
+                        error("Code Not Developed")
+                end
+            end
 
         end
 
-        %% Model Zero-Order Hold Discretization 
-        
         %% Graph Report
         % Generates then displays vertex and edge report of entire model
         function gmt_ReportGraph(obj)
             % Vertex Table
-            varNames_tmp = ["Vertex Name","Vertex Type","Vertex State Variable","State Variable Units","Capacitance Inputs","Capacitance","Capacitance Equation","Power Equation"];
+            varNames_tmp = ["Vertex Name","Vertex Type","State Type","Vertex State Variable","State Variable Units","Capacitance Inputs","Capacitance","Capacitance Equation","Power Equation"];
             for idx_tmp = 1:length(varNames_tmp)
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
@@ -349,34 +388,35 @@ classdef gmt_Graph
             for i = 1:obj.Properties.Nv
                 table_tmp(i,1) = {obj.Vertices(i).VertexName};
                 table_tmp(i,2) = {obj.Vertices(i).VertexType};
+                table_tmp(i,3) = {obj.Vertices(i).StateType};
                 if isempty(obj.Vertices(i).GraphStateVariables)
                     if isempty(obj.Vertices(i).GraphOutputVariables)
-                        table_tmp(i,3) = {""};
+                        table_tmp(i,4) = {""};
                     else
-                       table_tmp(i,3) = {obj.Vertices(i).GraphOutputVariables}; 
+                       table_tmp(i,4) = {obj.Vertices(i).GraphOutputVariables}; 
                     end
                 else
-                    table_tmp(i,3) = {obj.Vertices(i).GraphStateVariables};
+                    table_tmp(i,4) = {obj.Vertices(i).GraphStateVariables};
                 end
 
                 if isempty(obj.Vertices(i).Units)
-                    table_tmp(i,4) = {"Undefined"};
+                    table_tmp(i,5) = {"Undefined"};
                 else
-                    table_tmp(i,4) = {obj.Vertices(i).Units};
+                    table_tmp(i,5) = {obj.Vertices(i).Units};
                 end
 
                 if isempty(obj.Vertices(i).InputVariables)
-                    table_tmp(i,5) = {""};
+                    table_tmp(i,6) = {""};
                 else
-                    table_tmp(i,5) = {join([obj.Vertices(i).InputVariables],", ")};
+                    table_tmp(i,6) = {join([obj.Vertices(i).InputVariables],", ")};
                 end
-                table_tmp(i,6) = {obj.Vertices(i).GraphCapacitance};
-                table_tmp(i,7) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
-                table_tmp(i,8) = {str2sym(obj.Vertices(i).GraphPowerEq)};
+                table_tmp(i,7) = {obj.Vertices(i).GraphCapacitance};
+                table_tmp(i,8) = {str2sym(obj.Vertices(i).GraphCapacitanceEq)};
+                table_tmp(i,9) = {str2sym(obj.Vertices(i).GraphPowerEq)};
             end
 
             fprintf('\n');
-            gmtInt.gmt_PrintTable(table_tmp,[false, false, true, true, false, false, false, false])
+            gmtInt.gmt_PrintTable(table_tmp,[false, false, false, true, true, false, false, false, false])
 
 
             % Edge Table
@@ -415,19 +455,24 @@ classdef gmt_Graph
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
 
-            sz = [obj.Properties.Ns  length(varNames_tmp)];
+            intFlg = [obj.Vertices.VertexType] == gmtEnumE.gmt_VertexType.Internal;
+            rowSize = sum(intFlg);
+            lookupVector = find(intFlg);
+
+            sz = [rowSize  length(varNames_tmp)];
             table_tmp = table('Size',sz,'VariableTypes',varTypes_tmp,'VariableNames',varNames_tmp);
 
             % Assembly Table Data 
-            for i = 1:obj.Properties.Ns
-                table_tmp(i,1) = {obj.Vertices(obj.Properties.Ns_idx(i)).VertexName};
-                table_tmp(i,2) = {obj.Vertices(obj.Properties.Ns_idx(i)).GraphStateVariables};
+            for j = 1:length(lookupVector)
+                i = lookupVector(j);
+                table_tmp(j,1) = {obj.Vertices(i).VertexName};
+                table_tmp(j,2) = {obj.Vertices(i).GraphStateVariables};
                 if ~isempty(obj.InitialConditions) 
-                    table_tmp(i,3) = {obj.InitialConditions(i)};
+                    table_tmp(j,3) = {obj.InitialConditions(j)};
                 else
-                    table_tmp(i,3) = {"Unassigned"};
+                    table_tmp(j,3) = {"Unassigned"};
                 end
-                table_tmp(i,4) = {obj.Vertices(obj.Properties.Ns_idx(i)).Units};
+                table_tmp(j,4) = {obj.Vertices(i).Units};
             end
 
             % Convert string columns to cellstr to suppress quotes in display
@@ -478,7 +523,7 @@ classdef gmt_Graph
         % Returns the port connection data in easy to read format
         function gmt_ReportConnection(obj)
             num_params = length(obj.Ports);
-            varNames_tmp = ["Port Number","Parent","Description","PortType", "Element Number"];
+            varNames_tmp = ["Port Number","Parent","Description","Energy Domain","PortType", "Element Number"];
             for idx_tmp = 1:length(varNames_tmp)
                 varTypes_tmp(1,idx_tmp) = {'string'};
             end
@@ -488,20 +533,23 @@ classdef gmt_Graph
                 table_tmp(i,1) = {i};
                 table_tmp(i,2) = {obj.Ports(i).ParentName};
                 table_tmp(i,3) = {obj.Ports(i).Description};
-                table_tmp(i,4) = {obj.Ports(i).PortType};
-                table_tmp(i,5) = {obj.Ports(i).ElementNumber};
+                table_tmp(i,4) = {obj.Ports(i).EnergyDomain};
+                table_tmp(i,5) = {obj.Ports(i).PortType};
+                table_tmp(i,6) = {obj.Ports(i).ElementNumber};
+                
             end
 
             fprintf('\n'); 
-            gmtInt.gmt_PrintTable(table_tmp,[true, true, false, true, true])
-
-
+            gmtInt.gmt_PrintTable(table_tmp,[true, true, false, true, true, true])
 
         end
 
         %% Input Report  
         % Returns the port connection data in easy to read format
         function gmt_ReportInput(obj)
+
+            if ~isempty(obj.InputData)
+
             num_params = length(obj.InputData);
             varNames_tmp = ["Variable","Parent","Description","Units"];
             for idx_tmp = 1:length(varNames_tmp)
@@ -523,6 +571,11 @@ classdef gmt_Graph
             fprintf('\n');
             gmtInt.gmt_PrintTable(table_tmp,[true,false,false,true])
 
+            else
+                fprintf('\n');
+                fprintf('no input data contained in model');
+                fprintf('\n');
+            end
 
         end
 
@@ -653,6 +706,8 @@ classdef gmt_Graph
             Tot_y_num  = 0;
 
             %% Update graph specific state and state derivative variables 
+            Tot_As_num = 1;
+
             for i = 1:obj.Properties.Nv
                 
                 Ds_var_tmp = [];
@@ -676,7 +731,6 @@ classdef gmt_Graph
                 end
 
                 if isa(Num_As,'double') && Num_As ~= 0
-                    Tot_As_num = i;%(1:Num_As) + Tot_As_num(end); % Compute graph specific algebraic state variable numbering
                     if Num_As == 1 && strlength(extractAfter(As_var,"x")) == 0
                         As_var_tmp = strcat("x",num2str(Tot_As_num));
                     else
@@ -686,6 +740,7 @@ classdef gmt_Graph
                             end
                         end
                     end
+                    Tot_As_num = Tot_As_num + 1;
                 end
 
                 if isa(Num_y,"double") && Num_y ~= 0
@@ -786,13 +841,52 @@ classdef gmt_Graph
             % Dynamic State Variable Equations
             sys_dyneq_str_tmp = [obj.Vertices(DynVertices_idx).GraphStateDerVariables]' + " = " + [obj.Vertices(DynVertices_idx).GraphVertexEq]' + ";";
 
-            % Algebraic State Variable Equations
-            if ~isempty(AlgVertices_idx)
-                sys_algeq_str_tmp = [obj.Vertices(AlgIntVertices_idx).GraphStateVariables]' + " = " + [obj.Vertices(AlgIntVertices_idx).GraphVertexEq]' + ";";
-            else
-                sys_algeq_str_tmp = [];
-            end
+            % DAE Flag 
+            daeFlg = ~isempty(AlgIntVertices_idx);
 
+            % Initialize Algebraic Equation
+            sys_algeq_str_tmp = [];
+            
+            if daeFlg
+
+                % Construct Algebraic Equation
+                sys_algeq_str_tmp = [obj.Vertices(AlgIntVertices_idx).GraphStateVariables]' + " = " + [obj.Vertices(AlgIntVertices_idx).GraphVertexEq]' + ";";
+
+                % Algebraic Variables 
+                algVars_lhs = lhs(str2sym(sys_algeq_str_tmp));
+                algVars_lhs_str = string(algVars_lhs);
+                algVars_rhs = rhs(str2sym(sys_algeq_str_tmp));
+                algVars_rhs_str = string(algVars_rhs);
+                algVars_num = length(algVars_lhs);
+            
+                % Solve Algebraics 
+                if algVars_num > 1 
+            
+                    for i = 1:length(sys_algeq_str_tmp)
+                        rhsFlg(i) = contains(algVars_rhs_str(i),algVars_lhs_str);
+                    end
+                    
+                    algVars_lhs_solve = algVars_lhs_str(rhsFlg);
+                    algVars_rhs_solve = algVars_rhs_str(rhsFlg);
+                    algVars_exp_solve = algVars_lhs_solve + "==" + algVars_rhs_solve;
+            
+                    sys_algeq_str_old = sys_algeq_str_tmp(~rhsFlg);
+            
+                    algVars_exp_solve_sym = simplify(str2sym(algVars_exp_solve)./algVars_lhs(rhsFlg));
+                    algVars_exp_solved    = solve(algVars_exp_solve_sym,algVars_lhs(rhsFlg));
+            
+                    for i = 1:length(algVars_lhs_solve)
+                        varName_str = string(algVars_lhs_solve(i));
+                        sys_algeq_str_solved(i,:) = varName_str+ "=" + string(algVars_exp_solved.(varName_str)) + ";";
+                    end
+                
+                    % update algebraic equation string
+                    sys_algeq_str_tmp = [sys_algeq_str_old; sys_algeq_str_solved];
+            
+                end
+
+            end
+            
             % Stack string expression on top of each other
             sys_eq_str_tmp = [sys_dyneq_str_tmp; sys_algeq_str_tmp];
 
@@ -807,14 +901,14 @@ classdef gmt_Graph
             obj.SystemEquations.Expression = sym_sys_tmp; 
 
             %% Update System Disturbance Variables 
-            disturb_tmp = [obj.Vertices(AlgExtVertices_idx).GraphStateVariables]';
+            disturb_tmp = [obj.Vertices(ExtVertices_idx).GraphStateVariables]';
             
             isFuncOfExtAlg = [];
             for i = 1:length(disturb_tmp)
                 isFuncOfExtAlg(i) = contains(strjoin(string([obj.SystemEquations.RHS]')),disturb_tmp(i));
             end
 
-            Nd_idx = AlgExtVertices_idx(logical(isFuncOfExtAlg));
+            Nd_idx = ExtVertices_idx(logical(isFuncOfExtAlg));
             obj.Properties    = obj.Properties.gmt_PropertiesNd(length(Nd_idx),Nd_idx);
             obj.Disturbances  = [obj.Vertices(Nd_idx).GraphStateVariables];
 
@@ -866,6 +960,63 @@ classdef gmt_Graph
 
             end
 
+            %% Check model parameterization 
+            mdlParameters_exp = string(symvar(obj.SystemEquations.RHS));
+            stateIdx = ismember(mdlParameters_exp,obj.States);
+            disturbIdx = ismember(mdlParameters_exp,obj.Disturbances);
+            inputIdx = ismember(mdlParameters_exp,obj.Inputs);
+            removeIdx = stateIdx + disturbIdx + inputIdx;
+            mdlParameters_exp = mdlParameters_exp(~removeIdx);
+
+            mdlParameters_nonscalarIdx = [obj.ModelParameters.ParameterType] ~= gmtEnumE.gmt_ParameterType.Scalar;
+            mdlParameters_expressionIdx = [obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Expression;
+
+            mdlParameters_def = [];
+
+            if any(mdlParameters_nonscalarIdx)
+                mdlParameters_def_scalar = [obj.ModelParameters(~mdlParameters_nonscalarIdx).Variable];
+                mdlParameters_def_nonscalar = [obj.ModelParameters(mdlParameters_nonscalarIdx).Variable];
+                
+                for z = 1:length(mdlParameters_def_nonscalar)
+                    mdlParameters_def_tmp = strtrim(extractBefore(mdlParameters_def_nonscalar(z),"="));
+                    mdlParameters_def = [mdlParameters_def, mdlParameters_def_tmp];
+                end
+                
+                mdlParameters_def = [mdlParameters_def,mdlParameters_def_scalar];
+
+            else
+                mdlParameters_def = [obj.ModelParameters.Variable];
+            end
+
+            varsIgnore = gmtEnumE.gmt_Funcs().Funcs;
+
+            if any(mdlParameters_expressionIdx)
+
+                mdlParameters_def_expression = [obj.ModelParameters(mdlParameters_expressionIdx).Variable];
+
+                for z = 1:length(mdlParameters_def_expression)
+                    mdlParameters_def_expression_tmp = extractAfter(mdlParameters_def_expression(z),"=");
+                    varsTmp = regexp(mdlParameters_def_expression_tmp, '[A-Za-z][A-Za-z0-9_]*', 'match');
+                    varsTmp = varsTmp(~ismember(varsTmp,[mdlParameters_exp,obj.States]));
+                    varsTmp = varsTmp(~ismember(varsTmp,[mdlParameters_exp,obj.Disturbances]));
+                    varsTmp = varsTmp(~ismember(varsTmp,[mdlParameters_exp,obj.Inputs]));
+                    varsTmp = varsTmp(~ismember(varsTmp,varsIgnore));
+                    varsTmp = unique(varsTmp);
+                    mdlParameters_expressionVars{z} = varsTmp;
+
+                end
+                
+                mdlParameters_expressionVars = unique([mdlParameters_expressionVars{:}]);
+                mdlParameters_exp = [mdlParameters_exp,mdlParameters_expressionVars];
+
+            end
+
+            mdlParameters_underdefined = any(~ismember(mdlParameters_exp,mdlParameters_def));
+            mdlParameters_overdefined  = any(~ismember(mdlParameters_def,mdlParameters_exp));
+
+            % assert(~mdlParameters_underdefined,"model parameterization is underdefined")
+            % assert(~mdlParameters_overdefined ,"model parameterization is overdefined")
+
             % Build Simulation Code
             %% MATLAB Function Header and Footer
                 if ispc
@@ -915,7 +1066,7 @@ classdef gmt_Graph
                 sysfun_mfile_footer = "end";
 
             %% MATLAB Function Input Unpacking 
-            inputvar_list = [obj.Vertices(DynVertices_idx).GraphStateVariables]';
+            inputvar_list = [[obj.Vertices(DynVertices_idx).GraphStateVariables],[obj.Vertices(AlgIntVertices_idx).GraphStateVariables]]';
             sysfun_mfile_prefix = "";
             for i = 1:length(inputvar_list)
                 sysfun_mfile_prefix(i,1) = inputvar_list(i) + " = y(" + i + ");";
@@ -1004,13 +1155,77 @@ classdef gmt_Graph
             %% MATLAB Function Body 
             % Create string expression for each type
             sys_dyneq_str_tmp = [obj.Vertices(DynVertices_idx).GraphStateDerVariables]' + " = " + [obj.Vertices(DynVertices_idx).GraphVertexEq]' + ";";
-            sys_algeq_str_tmp = [obj.Vertices(AlgVertices_idx).GraphStateVariables]'+ "_ = " + [obj.Vertices(AlgVertices_idx).GraphVertexEq]' + ";" ;
+            
+            % DAE Flag 
+            daeFlg = ~isempty(AlgIntVertices_idx);
+
+            % Algebraic Equation
+            sys_algeq_str_tmp = [];
+            
+            if daeFlg
+                
+                % construct equation string  
+                sys_algeq_str_tmp = [obj.Vertices(AlgIntVertices_idx).GraphStateVariables]' + " = " + [obj.Vertices(AlgIntVertices_idx).GraphVertexEq]' + ";";
+                    
+                % algebraic variables 
+                algVars_lhs = lhs(str2sym(sys_algeq_str_tmp));
+                algVars_lhs_str = string(algVars_lhs);
+                algVars_rhs = rhs(str2sym(sys_algeq_str_tmp));
+                algVars_rhs_str = string(algVars_rhs);
+                algVars_num = length(algVars_lhs);
+
+                % initialize number of solved variables
+                slvVars_num = 0;
+                rhsFlg = 1;
+
+                % solve algebraics when more than one algebraic variables  
+                sys_algeq_str_solved = "";
+                
+                if algVars_num > 1
+    
+                    % determine implicit equations
+                    rhsFlg = [];
+                    for i = 1:length(sys_algeq_str_tmp)
+                        rhsFlg(i,1) = contains(algVars_rhs_str(i),algVars_lhs_str);
+                    end
+
+                    % solve algebraic equations
+                    algVars_lhs_solve = algVars_lhs_str(find(rhsFlg));
+                    algVars_rhs_solve = algVars_rhs_str(find(rhsFlg));
+                    algVars_exp_solve = algVars_lhs_solve + " == " + algVars_rhs_solve;
+                    algVars_exp_solve_sym = simplify(str2sym(algVars_exp_solve)./algVars_lhs(find(rhsFlg)));
+                    algVars_exp_solved    = solve(algVars_exp_solve_sym,algVars_lhs(find(rhsFlg)));
+
+                    % number of solved variables 
+                    slvVars_num = length(algVars_lhs_solve);
+
+                    % construct solve equation string  
+                    for i = 1:slvVars_num
+                        varName_str = string(algVars_lhs_solve(i));
+                        sys_algeq_str_solved(i,:) = varName_str + "_out" + " = " + string(algVars_exp_solved.(varName_str)) + " - " + varName_str +";";
+                    end
+
+                end
+
+                % construct explicit equations
+                algExplicit_idx = AlgIntVertices_idx(find(~rhsFlg));
+                sys_algeq_exp_str_tmp = "";
+                for i = 1:(algVars_num-slvVars_num)
+                    sys_algeq_exp_str_tmp = [obj.Vertices(algExplicit_idx).GraphStateVariables]'+ "_out = " + [obj.Vertices(algExplicit_idx).GraphVertexEq]' + " - " + [obj.Vertices(algExplicit_idx).GraphStateVariables]' + ";" ;
+                end
+
+                % update algebraic equation string
+                sys_algeq_str_tmp = [sys_algeq_exp_str_tmp; sys_algeq_str_solved];
+
+            end
 
             % Stack string expression on top of each other
-            sysfun_mfile_body = [sys_dyneq_str_tmp;sys_algeq_str_tmp];
+            sysfun_mfile_body = [sys_dyneq_str_tmp; sys_algeq_str_tmp];
 
             %% MATLAB Function Output Packing 
-            outputvar_list = [obj.Vertices(DynVertices_idx).GraphStateDerVariables]';
+            dynVars_out = [obj.Vertices(DynVertices_idx).GraphStateDerVariables]';
+            algVars_out = [obj.Vertices(AlgIntVertices_idx).GraphStateVariables]'+ "_out";
+            outputvar_list = [dynVars_out;algVars_out];
             packingCode = "res = [" + strjoin(outputvar_list',";") + "];";
             sysfun_mfile_suffix = packingCode';
 
@@ -1029,6 +1244,14 @@ classdef gmt_Graph
             obj.ModelMetadata.mfileCode = sysfun_mfile_combined;
             obj.ModelMetadata.mfileCode_param = sysfun_mfile_param;
             obj.ModelMetadata.FunctionName = sysfun_FunctionName;
+
+
+            %% Create DAE Mass Matrix 
+            NsD_tmp = sum(([obj.Vertices.StateType]==gmtEnumE.gmt_StateType.Dynamic));
+            NsA_tmp = sum(all([[obj.Vertices.StateType]'==gmtEnumE.gmt_StateType.Algebraic,[obj.Vertices.VertexType]'==gmtEnumE.gmt_VertexType.Internal],2));
+            dynEye = eye(NsD_tmp,NsD_tmp);
+            algEye = zeros(NsA_tmp,NsA_tmp);
+            obj.ModelMetadata.MassMatrix = blkdiag(dynEye,algEye);
 
         end
         
@@ -1286,11 +1509,81 @@ classdef gmt_Graph
 
         %% Add Initial Conditions
         function obj = gmt_InitCon(obj,InitConVals)
-                % Validate InitCon 
+                % Validate InitCon Dimensions   
+                assert(obj.Properties.Ns == size(InitConVals,2),"Number of initial conditions does not match number of states")
                 validInitCon = all(isnumeric(InitConVals),size(InitConVals,1) == 1);
                 assert(validInitCon,"Invalid Initial Condition Formatting, Must Be Row Vector With Length Equal to Number of Dynamic States")
+                % Add Initial Conditions
                 obj.InitialConditions = InitConVals;
         end
+
+        %% Algebraic State Conversion 
+        function obj = gmt_Algebraic(obj,algVertices,varargin)
+            
+            % compute number of rows and columns
+            algVertices_numCols = size(algVertices,1);
+            algVertices_numRows = size(algVertices,2);
+
+            % determine if a vector 
+            isColumnVector_flg  = ((algVertices_numCols == 1) && (algVertices_numRows >= 1));
+            isRowVector_flg     = ((algVertices_numCols >= 1) && (algVertices_numRows == 1));
+            isVector_flg = isColumnVector_flg || isRowVector_flg;
+
+            % assert vector format
+            assert(isVector_flg,"algebraic vertex parameter is a not a vector")
+
+            % convert to column vector
+            if isRowVector_flg
+                algVertices = algVertices';
+                algVertices_numCols = size(algVertices,1);
+                algVertices_numRows = size(algVertices,2);
+            end
+
+            % decompose model 
+            objectName_tmp = obj.Name;
+            vertices_tmp = obj.Vertices;
+            edges_tmp = obj.Edges;
+            edgematrix_tmp = obj.EdgeMatrix;
+            parameters_tmp = obj.ModelParameters;
+            ports_tmp = obj.Ports;
+            inputs_tmp = obj.InputData;
+
+            % loop through algebraic vertices array 
+            for i = 1:algVertices_numRows
+                vertexNum = algVertices(i);
+                % create temporary vertex object
+                vertexObj_tmp = obj.Vertices(vertexNum);
+                % check if algebraic already 
+                algFlg = vertexObj_tmp.StateType == gmtEnumE.gmt_StateType.Algebraic;
+                if ~algFlg 
+                    % remove x_dot from capacitance equation
+                    capEq_tmp = "x";
+                    % grab description 
+                    vertexName_tmp = vertexObj_tmp.VertexName;
+                    % grab units 
+                    units_tmp = vertexObj_tmp.Units;
+                    % grab externality 
+                    if vertexObj_tmp.VertexType == gmtEnumE.gmt_VertexType.External
+                        extFlg = true;
+                    else
+                        extFlg = false;
+                    end
+                    % create new vertex object
+                    vertexObj_new = gmt_Vertex(vertexName_tmp,capEq_tmp,"units",units_tmp,"External",extFlg);
+                    % assign new vertex to old vertex
+                    vertices_tmp(vertexNum) = vertexObj_new;
+
+                else
+                    fprintf('\n vertex %3.0f is already algebraic skipped \n',vertexNum)
+                end
+
+            end
+
+            % update graph model 
+            obj = gmt_Graph(objectName_tmp,edgematrix_tmp,edges_tmp,vertices_tmp,parameters_tmp,inputs_tmp,ports_tmp,varargin{:});
+
+        end
+
 
         %% Build Simulation
         function obj = gmt_BuildSim(obj,filepath)
@@ -1342,24 +1635,104 @@ classdef gmt_Graph
                     ic = string(obj.InitialConditions)';
                 end
                 icstr1_tmp = "% Initial Conditions";
-                icstr1_tmp = [icstr1_tmp; [obj.Vertices(obj.Properties.Ns_idx).GraphStateVariables]' + "_0 = "+ ic + ";  % " + [obj.Vertices(obj.Properties.Ns_idx).VertexName]' + " (Units: " + string([obj.Vertices(obj.Properties.Ns_idx).Units]')+ ")"];
-                icstr2_tmp = "y0 = [" + strjoin([obj.Vertices(obj.Properties.Ns_idx).GraphStateVariables]+"_0",",") + "];";
+                
+                dynVertex_idx = find([obj.Vertices.StateType]' == gmtEnumE.gmt_StateType.Dynamic);
+                dynVertex_idx = intersect(obj.Properties.Ns_idx,dynVertex_idx);
+                algVertex_idx = setdiff(obj.Properties.Ns_idx,dynVertex_idx);
+                stateVars_idx = [dynVertex_idx; algVertex_idx'];
+                stateVars_tmp = [obj.Vertices(stateVars_idx).GraphStateVariables];
+
+                icstr1_tmp = [icstr1_tmp; stateVars_tmp' + "_0 = "+ ic + ";  % " + [obj.Vertices(stateVars_idx).VertexName]' + " (Units: " + string([obj.Vertices(stateVars_idx).Units]')+ ")"];
+                icstr2_tmp = "y0 = [" + strjoin(stateVars_tmp+"_0",",") + "];";
                 icstr_tmp = [icstr1_tmp;icstr2_tmp];
                 sysFuncName_tmp = obj.ModelMetadata.FunctionName; 
-                simbody_tmp = "[t, y] = ode23s(@(t,y) " + sysFuncName_tmp + ", [0 SimTEnd], y0);";
+
+                massMatrix_trace = trace(obj.ModelMetadata.MassMatrix);
+                massMatrix_size  = size(obj.ModelMetadata.MassMatrix,1);
+                
+                if massMatrix_size > massMatrix_trace
+                    daeFlg = true;
+                else
+                    daeFlg = false;
+                end
+
+                % update initial conditions and options for DAE
+                simanony_tmp = [];
+                
+                if daeFlg
+
+                    findIC_str = ... 
+                        ["M = " + string(obj.Name) + ".ModelMetadata.MassMatrix;"
+                        "daeFun = @(t,y)" + sysFuncName_tmp + ";"
+                        "y0_guess = y0;"
+                        "y0 = findConsistentIC(daeFun,M,y0_guess);"];
+
+                    findConsistentIC_str = ... 
+                        ["function x0 = findConsistentIC(daeFun,M,x0_guess)"
+                        "% Find algebraic equations from mass matrix"
+                        "alg_idx = find(diag(M)==0);"
+                        ""
+                        "if isempty(alg_idx)"
+                        "    x0 = x0_guess;"
+                        "    return"
+                        "end"
+                        ""
+                        "% Initial guess for algebraic variables"
+                        "xa_guess = x0_guess(alg_idx);"
+                        ""
+                        "options = optimoptions('fsolve',..."
+                        "    'Display','none',..."
+                        "    'FunctionTolerance',1e-12);"
+                        ""
+                        "% Solve algebraic constraints"
+                        "xa = fsolve(@(xa) algebraicResidual(..."
+                        "    xa,..."
+                        "    x0_guess,..."
+                        "    alg_idx,..."
+                        "    daeFun),..."
+                        "    xa_guess,..."
+                        "    options);"
+                        ""
+                        "% Replace algebraic variables"
+                        "x0 = x0_guess;"
+                        "x0(alg_idx) = xa;"
+                        "end"];
+
+                    algebraicResidual_str = ...
+                        ["function g = algebraicResidual(xa,x,alg_idx,daeFun)"
+                          ""
+                          "    x(alg_idx) = xa;"
+                          ""
+                          "    F = daeFun(0,x);"
+                          ""
+                          "    g = F(alg_idx);"
+                          ""
+                          "end"];
+
+                    options_tmp = "options = odeset('Mass',M);";
+                    simbody_tmp = [findIC_str; options_tmp; "[t, y] = ode23t(@(t,y) " + sysFuncName_tmp + ", [0 SimTEnd], y0, options);"];
+                    simanony_tmp = [findConsistentIC_str; algebraicResidual_str];
+                else
+                    simbody_tmp = "[t, y] = ode23s(@(t,y) " + sysFuncName_tmp + ", [0 SimTEnd], y0);";
+                end
                 
                 plotstr_tmp =[... 
-                "% Plot Only Internal State Types";
-                "InternalIdx = (["+obj.Name+".Vertices.VertexType] == gmt_VertexType.Internal);";
-                "NumInternal = size(y,2);";
-                "DimSubPlot = max(ceil(sqrt(NumInternal)),2);";
-                
-                "ylabels_tmp = ["+obj.Name+".Vertices(InternalIdx).VertexName];";
+                "% Plot only internal state types";
+                "% Concatenate dynamic and algebraic state variables"
+                "dynamicIdx  = find(["+obj.Name+".Vertices.StateType]  == gmtEnumE.gmt_StateType.Dynamic);";
+                "algebraicIdx  = find(["+obj.Name+".Vertices.StateType]  == gmtEnumE.gmt_StateType.Algebraic);";
+                "internalIdx = find(["+obj.Name+".Vertices.VertexType] == gmtEnumE.gmt_VertexType.Internal);";
+                "intDyn_idx  = intersect(dynamicIdx,internalIdx);"
+                "intAlg_idx  = intersect(algebraicIdx,internalIdx);"
+                "stateIdx    = [intDyn_idx,intAlg_idx];"
+                "internalNum = size(y,2);";
+                "subplotDim  = max(ceil(sqrt(internalNum)),2);";
+                "ylabels_tmp = ["+obj.Name+".Vertices(stateIdx).VertexName];";
                 "ylabelsnew_tmp = replace(ylabels_tmp, " + """:"""+ ", newline);";
                 
                 "figure";
-                "for i = 1:NumInternal";
-                "    subplot(DimSubPlot,DimSubPlot,i)";
+                "for i = 1:internalNum";
+                "    subplot(subplotDim,subplotDim,i)";
                 "    plot(t,y(:,i))";
                 "    xlabel('Time')";
                 "    ylabel(ylabelsnew_tmp(i))";
@@ -1373,25 +1746,34 @@ classdef gmt_Graph
                 end
                
                 sysfun_mfile_preheader = "% Code-Auto Generated By " + user + " using gmt Toolbox on " + string(datetime);
+
+                % system function header
+                simScript_header = [
+                                    "% Disable lookup warnings"
+                                    "disableLookupWarnings_Flg = false;"
+                                    "if disableLookupWarnings_Flg"
+                                    "    warning('off','gmt_lookupAxis:upperlimit')"
+                                    "    warning('off','gmt_lookupAxis:lowerlimit')"
+                                    "else"
+                                    "    warning('on','gmt_lookupAxis:upperlimit')"
+                                    "    warning('on','gmt_lookupAxis:lowerlimit')"
+                                    "end"
+                                    ];
                 
                 SimScriptGen_mfilecode = ...
                     [sysfun_mfile_preheader; ...
+                     simScript_header; ...
                      inputstr_tmp; ...
                      extalgstr_tmp; ...
                      simtimstr_tmp; ...
                      icstr_tmp; ...
                      simbody_tmp; ...
-                     plotstr_tmp];
+                     plotstr_tmp;
+                     simanony_tmp];
 
                 writelines(SimScriptGen_mfilecode, syssim_file_save_path);    
 
                 save(sysobj_file_save_path, "obj")
-    
-                % Create DAE Mass Matrix 
-                NsD_tmp = sum(([obj.Vertices.StateType]==gmtEnumE.gmt_StateType.Dynamic));
-                NsA_tmp = sum(([obj.Vertices.StateType]==gmtEnumE.gmt_StateType.Algebraic));
-
-                obj.ModelMetadata.MassMatrix = blkdiag(eye(NsD_tmp));
 
         end
 
@@ -1555,21 +1937,89 @@ classdef gmt_Graph
                     objB_tVn = [SecondaryObj{i}.Edges(objB_EdgeNum).TailVertexNum];
 
                     % EdgeA HeadTail Vertex Assignment
-                    if PrimaryObj{i}.Vertices(objA_hVn).GraphNvE == 1
-                        objA_VertexNumR(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_hVn));
-                    elseif PrimaryObj{i}.Vertices(objA_tVn).GraphNvE == 1
-                        objA_VertexNumR(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_tVn));
-                    else
-                        error("New case identified, notify developer")
+                    % create truth table 
+                    % vertex type and number of edges at each vertex
+                    % case 1: external & one edge -> remove
+                    % case 2: external % > one edge -> remove
+                    % case 3: internal & one edge -> remove
+                    % case 4: internal % > one edge -> keep 
+                    
+                    % primary object
+                    objA_hV_removeFlg = PrimaryObj{i}.Vertices(objA_hVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    objA_tV_removeFlg = PrimaryObj{i}.Vertices(objA_tVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    
+                    % secondary logic flag determination 
+                    objA_secLogic_flg = false;
+                    if objA_hV_removeFlg == objA_tV_removeFlg
+                        objA_secLogic_flg = true;
                     end
-    
-                    % EdgeB HeadTail Vertex Assignment
-                    if SecondaryObj{i}.Vertices(objB_hVn).GraphNvE == 1
-                        objB_VertexNumR(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_hVn));
-                    elseif SecondaryObj{i}.Vertices(objB_tVn).GraphNvE == 1
-                        objB_VertexNumR(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_tVn));
+
+                    % second logic executation 
+                    if objA_secLogic_flg
+
+                        % compute number of edges
+                        objA_hV_numEdge = PrimaryObj{i}.Vertices(objA_hVn).GraphNvE;
+                        objA_tV_numEdge = PrimaryObj{i}.Vertices(objA_tVn).GraphNvE;
+                        
+                        % determine remove flags 
+                        if objA_hV_numEdge > objA_tV_numEdge
+                            objA_tV_removeFlg = true;
+                            objA_hV_removeFlg = false;
+                        elseif objA_tV_numEdge > objA_hV_numEdge
+                            objA_tV_removeFlg = false;
+                            objA_hV_removeFlg = true;
+                        else
+                            error("New case identified, notify developer")
+                        end
+
+                    end
+
+                    % select vertex for removal 
+                    if objA_hV_removeFlg 
+                        objA_VertexNumR(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_hVn));
+                        objA_VertexNumR_inv(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_tVn));
                     else
-                        error("New case identified, notify developer")
+                        objA_VertexNumR(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_tVn));
+                        objA_VertexNumR_inv(i) = objC_Nv_new{objA_idx}((objC_Nv_old{objA_idx}==objA_hVn));
+                    end
+
+                    % primary object
+                    objB_hV_removeFlg = PrimaryObj{i}.Vertices(objB_hVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    objB_tV_removeFlg = PrimaryObj{i}.Vertices(objB_tVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    
+                    % secondary logic flag determination 
+                    objB_secLogic_flg = false;
+                    if objB_hV_removeFlg == objB_tV_removeFlg
+                        objB_secLogic_flg = true;
+                    end
+
+                    % second logic executation 
+                    if objB_secLogic_flg
+
+                        % compute number of edges
+                        objB_hV_numEdge = PrimaryObj{i}.Vertices(objB_hVn).GraphNvE;
+                        objB_tV_numEdge = PrimaryObj{i}.Vertices(objB_tVn).GraphNvE;
+                        
+                        % determine remove flags 
+                        if objB_hV_numEdge > objB_tV_numEdge
+                            objB_tV_removeFlg = true;
+                            objB_hV_removeFlg = false;
+                        elseif objB_tV_numEdge > objB_hV_numEdge
+                            objB_tV_removeFlg = false;
+                            objB_hV_removeFlg = true;
+                        else
+                            error("New case identified, notify developer")
+                        end
+
+                    end
+
+                    % select vertex for removal 
+                    if objB_hV_removeFlg 
+                        objB_VertexNumR(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_hVn));
+                        objB_VertexNumR_inv(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_tVn));
+                    else
+                        objB_VertexNumR(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_tVn));
+                        objB_VertexNumR_inv(i) = objC_Nv_new{objB_idx}((objC_Nv_old{objB_idx}==objB_hVn));
                     end
 
                 % Vertex Connection Algorithm 
@@ -1590,6 +2040,8 @@ classdef gmt_Graph
             objB_EdgeNumR_idx = find(objB_EdgeNumR>0);
             objA_VertexNumR_idx = find(objA_VertexNumR>0);
             objB_VertexNumR_idx = find(objB_VertexNumR>0);
+            objA_VertexNumR_inv_idx = find(objA_VertexNumR_inv>0);
+            objB_VertexNumR_inv_idx = find(objB_VertexNumR_inv>0);
             objA_VertexNumM_idx = find(objA_VertexNumM>0);
             objB_VertexNumRvt_idx = find(objB_VertexNumRvt>0);
 
@@ -1598,15 +2050,38 @@ classdef gmt_Graph
             objB_EdgeNumR = objB_EdgeNumR(objB_EdgeNumR_idx);
             objA_VertexNumR = objA_VertexNumR(objA_VertexNumR_idx);
             objB_VertexNumR = objB_VertexNumR(objB_VertexNumR_idx);
-            objA_VertexNumM =objA_VertexNumM(objA_VertexNumM_idx);
+            objA_VertexNumR_inv = objA_VertexNumR_inv(objA_VertexNumR_inv_idx);
+            objB_VertexNumR_inv = objB_VertexNumR_inv(objB_VertexNumR_inv_idx);
+            objA_VertexNumM = objA_VertexNumM(objA_VertexNumM_idx);
             objB_VertexNumRvt = objB_VertexNumRvt(objB_VertexNumRvt_idx);
             
-            % Create Incidence Matrix 
-            objC_VertexNumR = sort([objA_VertexNumR,objB_VertexNumR,objB_VertexNumRvt]); % order vertices to remove 
-            Mc(:,objA_EdgeNumM) = Mc(:,objA_EdgeNumM) + Mc(:,objB_EdgeNumR); % concatenate common edge columns together 
-            Mc(objA_VertexNumM,:) = Mc(objA_VertexNumM,:) + Mc(objB_VertexNumRvt,:); % concatenate common edge columns together 
-            Mc(objC_VertexNumR,:) = []; % delete associated vertex rows 
-            Mc(:,objB_EdgeNumR) = []; % delete associate edge columns
+            % create system incidence matrix
+
+            % order vertices to remove 
+            objC_VertexNumR = sort([objA_VertexNumR,objB_VertexNumR,objB_VertexNumRvt]); 
+            % concatenate common edge columns together 
+            Mc(:,objA_EdgeNumM) = Mc(:,objA_EdgeNumM) + Mc(:,objB_EdgeNumR); 
+            % concatenate common edge columns together
+            Mc(objA_VertexNumM,:) = Mc(objA_VertexNumM,:) + Mc(objB_VertexNumRvt,:);  
+
+            % remap edge connections from old to new vertex
+            objC_EdgeNumK = setdiff(1:size(Mc,2),objA_EdgeNumM);
+            Mc(objB_VertexNumR_inv,objC_EdgeNumK) = Mc(objA_VertexNumR,objC_EdgeNumK) + Mc(objB_VertexNumR_inv,objC_EdgeNumK);
+            Mc(objA_VertexNumR_inv,objC_EdgeNumK) = Mc(objB_VertexNumR,objC_EdgeNumK) + Mc(objA_VertexNumR_inv,objC_EdgeNumK);
+
+            % remap old to new vertex
+            objC_VertexNumR_inv    = [objA_VertexNumR_inv,objB_VertexNumR_inv,objA_VertexNumM];
+            objC_VertexNumR_unsort = [objA_VertexNumR,objB_VertexNumR,objB_VertexNumRvt];
+
+            for i = 1:length(objC_VertexNumR_inv)
+                    idxNum_tmp = objC_VertexNumR_inv(i);
+                    idxNum_remove = sum(objC_VertexNumR <= idxNum_tmp);
+                    objC_VertexNumR_inv_new(i) = idxNum_tmp - idxNum_remove;
+            end
+
+            % delete associated edge columns and vertex rows 
+            Mc(objC_VertexNumR,:) = []; 
+            Mc(:,objB_EdgeNumR) = []; 
 
             % Update Final Dimensions 
             objC_Nv = size(Mc,1);
@@ -1644,50 +2119,101 @@ classdef gmt_Graph
             ParamTot_nonCommon_repeat_cnts = ParamTot_nonCommon_repeat_cnts(ParamTot_nonCommon_repeat_name_idx);
             % Compute repeat variable names
             ParamTot_nonCommon_repeat_name = ParamTot_nonCommon_name_unique(ParamTot_nonCommon_repeat_name_idx);
-            % Compute indices that will require updates
-            ParamTot_nonCommon_repeat_idx = find(ismember(ParamTot_name,ParamTot_nonCommon_repeat_name));
-            % Compute component number 
-            ParamTot_nonCommon_repeat_comp = ParamsTot_comp_idx(ParamTot_nonCommon_repeat_idx);
-            % Compute variable names all 
-            ParamTot_nonCommon_repeat_name_all = ParamTot_name(ParamTot_nonCommon_repeat_idx);
-            % Number of variables to update
-            ParamTot_num_vars_update = length(ParamTot_nonCommon_repeat_name);
+            % Compute number of variable updates required
+            ParamTot_totnum_idxUpdates = length(ParamTot_nonCommon_repeat_cnts);
+            % compute total number of variable upates requires
             ParamTot_totnum_updates = sum(ParamTot_nonCommon_repeat_cnts);
+            % Compute indices that will require updates
+            % Create cell array for each variable with associated indices that require updates
+            for k = 1:ParamTot_totnum_idxUpdates
+                ParamTot_nonCommon_repeat_idx{k} = find(strcmp(ParamTot_name,ParamTot_nonCommon_repeat_name(k)));
+                % Compute component number
+                ParamTot_nonCommon_repeat_comp{k} = ParamsTot_comp_idx(ParamTot_nonCommon_repeat_idx{k});
+                % Compute variable names all
+                ParamTot_nonCommon_repeat_name_all{k} = ParamTot_name(ParamTot_nonCommon_repeat_idx{k});
+            end
 
-            % For each variable that repeats, update the variable suffix 
+            % add suffix to old variable to create new variable
+            % 
             idx_tot = 1;
-            for i = 1:ParamTot_num_vars_update
-                suffix_tmp = 1; % initialize suffix numbering
-                repeat_name_old = ParamTot_nonCommon_repeat_name(i); % temporary store of variable name 
-                comp_tot_idx = ParamTot_nonCommon_repeat_comp(ismember(ParamTot_nonCommon_repeat_name_all,repeat_name_old));
+            
+            for i = 1:ParamTot_totnum_idxUpdates
+
+                % initialize suffix numbering
+                suffix_tmp = 1; 
+                % old variable name to update 
+                repeat_name_old = ParamTot_nonCommon_repeat_name(i); 
+                % component number index 
+                comp_tot_idx = ParamTot_nonCommon_repeat_comp{i};
+                % compute total number of update for current variable
                 tot_updates = ParamTot_nonCommon_repeat_cnts(i);
-                % For each time the variable repeats, update the suffix, verify new suffix is not contained within original variable list
+                % all indices to update for current variable 
+                params_update_idx = ParamTot_nonCommon_repeat_idx{i};
+
+                % Update suffix each time the variable repeats 
+                % Verify new suffix is not contained in parameter variable list 
+                % Update parmeter variable list when new suffix is created 
                 for j = 1:tot_updates
+                    % parameter update index 
+                    paramUpdate_idx = params_update_idx(j);
+                    % expression flag 
+                    paramExpresFlg = ParamsTot(paramUpdate_idx).Expression == true;
+                    % component number array 
+                    comp_idx(idx_tot) = comp_tot_idx(j);
+                    % old parameter array 
+                    param_old(idx_tot) = repeat_name_old;
+                    % loop until suffix does not exist in parameter variable list 
                     while true 
-                    repeat_name_new = repeat_name_old + "_" + string(suffix_tmp);
-                    suffix_tmp = suffix_tmp + 1;
+                        % create new variable using suffix 
+                        repeat_name_new = repeat_name_old + "_" + string(suffix_tmp);
+                        % increment suffix by one 
+                        suffix_tmp = suffix_tmp + 1;
+                        % if the variable does not exist in parameter list update parameter object variable name 
                         if any(~ismember(ParamTot_name,repeat_name_new))
-                            param_idx = ParamTot_nonCommon_repeat_idx(idx_tot);
-                            param_old(idx_tot) = repeat_name_old;
-                            param_new(idx_tot) = repeat_name_new;
-                            comp_idx(idx_tot) = comp_tot_idx(j);
-                            % If a scalar value update variable, else update LHS of expression
-                            if ParamsTot(param_idx).Expression == false
-                                ParamsTot(param_idx).Variable = repeat_name_new;
+                            % if parameter is not an expression, replace variable directly
+                            if ~paramExpresFlg
+                                ParamsTot(paramUpdate_idx).Variable = repeat_name_new;
+                            % else parameter is expression, update lhs of expression with new variable name
                             else
-                                expression_tmp = ParamsTot(param_idx).Variable;
+                                % temporarily store current expression 
+                                expression_tmp = ParamsTot(paramUpdate_idx).Variable;
+                                % determine original lhs
                                 expression_lhs_old = extractBefore(expression_tmp,"=");
+                                % determine rhs
                                 expression_rhs_tmp = extractAfter(expression_tmp,"=");
+                                % update lhs 
                                 expression_lhs_new = replace(expression_lhs_old,repeat_name_old,repeat_name_new);
-                                ParamsTot(param_idx).Variable = expression_lhs_new + "=" + expression_rhs_tmp;
+                                % combine new lhs and original rhs 
+                                expression_new = expression_lhs_new + "=" + expression_rhs_tmp;
+                                % update parameter object with new expression
+                                ParamsTot(paramUpdate_idx).Variable = expression_new;
                             end
+                            % new parameter array 
+                            param_new(idx_tot) = repeat_name_new;
+                            % increment update array index
                             idx_tot = idx_tot + 1;
+                            % update variable name list for renmaing
+                            ParamTot_name = [ParamsTot.Variable];
+                            ParamTot_name(ParamTot_expression_idx) = strtrim(extractBefore(ParamTot_name(ParamTot_expression_idx),"="));
                             break;
+                        else
+                            fprintf('Error, contained in original list, notify developer')
                         end
                     end
                 end
             end
 
+            % grab symbols from class and create regular expression to seperate variables from operators
+            operators_tmp = gmtEnumE.gmt_Symbols().Symbols;
+            parentheses_tmp = ["(",")",","];
+            %functions_tmp = gmtEnumE.gmt_Funcs().Funcs;
+            operatorsEscaped = regexptranslate('escape', [operators_tmp,parentheses_tmp]);
+            operatorsPattern = "[" + strjoin(cellstr(operatorsEscaped), "") + "]";
+            inner = extractBetween(operatorsPattern, 2, strlength(operatorsPattern)-1);
+            operatorRegExpr = operatorsPattern + "|[^" + inner + "]+";
+
+            % 
+       
             for i = 1:ParamTot_totnum_updates
                 CompNum_idx = comp_idx(i);
                 ParametersVars_old_tmp = param_old(i);
@@ -1698,21 +2224,30 @@ classdef gmt_Graph
                     for j = 1:length(EdgeNums)
                         EdgeIdx = EdgeNums(j);
                         EdgeEq_tmp = EdgeTot(EdgeIdx).EdgeEq;
-                        if contains(EdgeEq_tmp,ParametersVars_old_tmp)
-                            EdgeTot(EdgeIdx).EdgeEq = replace(EdgeEq_tmp,ParametersVars_old_tmp,ParametersVars_new_tmp);
+                        EdgeEq_sep = strtrim(regexp(EdgeEq_tmp,operatorRegExpr, "match"));
+                        if any(contains(EdgeEq_sep,ParametersVars_old_tmp))
+                            edgeVarIdx = find(EdgeEq_sep == ParametersVars_old_tmp);
+                            EdgeEq_sep(edgeVarIdx) = ParametersVars_new_tmp;
+                            EdgeEq_new = join(EdgeEq_sep,"");
+                            EdgeTot(EdgeIdx).EdgeEq = EdgeEq_new;
                         end
                     end
         
                     for j = 1:length(VertexNums)
                         CapEq_tmp = VertexTot(VertexNums(j)).CapacitanceEq;
-                        if contains(CapEq_tmp,ParametersVars_old_tmp)
-                            VertexTot(VertexNums(j)).CapacitanceEq = replace(CapEq_tmp,ParametersVars_old_tmp,ParametersVars_new_tmp);
+                        CapEq_sep = strtrim(regexp(CapEq_tmp,operatorRegExpr, "match"));
+                        if any(contains(CapEq_sep,ParametersVars_old_tmp))
+                            vertexVarIdx = find(CapEq_sep == ParametersVars_old_tmp);
+                            CapEq_sep(vertexVarIdx) = ParametersVars_new_tmp;
+                            CapEq_new = join(CapEq_sep,"");
+                            VertexTot(VertexNums(j)).CapacitanceEq = CapEq_new;
                         end
                     end
                 end
             end
 
-            [ParameterUnique, ia, ic] = unique([ParamsTot.Variable]);
+            [ParameterUnique, ia, ic] = unique([ParamsTot.Variable]');
+            ia = sort(ia);
             ParameterNew = ParamsTot(ia);
 
             %% Update Dependent Vertex State Variables
@@ -1723,8 +2258,13 @@ classdef gmt_Graph
                 CompNum_idx = VertexTot_comp_idx(VertexStateVar_idx(i));
                 OldStateNum(i) = double(extractAfter(VertexStateVar_old(VertexStateVar_idx(i)),"x"));
                 NewStateNum(i) = objC_Nv_new{CompNum_idx}(objC_Nv_old{CompNum_idx} == OldStateNum(i));
-                NumRemove = sum(objC_VertexNumR < NewStateNum(i));
-                NewStateNum(i) = NewStateNum(i) - NumRemove;
+                NewStateNum_idx = find(objC_VertexNumR_unsort == NewStateNum(i));
+                if isempty(NewStateNum_idx)
+                    idxNum_remove = sum(objC_VertexNumR <= NewStateNum(i));
+                    NewStateNum(i) = NewStateNum(i) - idxNum_remove;
+                else
+                    NewStateNum(i) = objC_VertexNumR_inv_new(NewStateNum_idx);
+                end
                 VertexUpdateArray = setdiff(objC_Nv_new{CompNum_idx},objC_VertexNumR);
                 NumCapacitance = length(VertexUpdateArray);
                 OldStateVar = "x" + string(OldStateNum(i));
@@ -1813,6 +2353,11 @@ classdef gmt_Graph
             %% Update Input Array
             InputVars_new = [Inputs_new{:}]';
             NumInputVars = length(InputVars_new);
+
+            if isempty(InputVars_new)
+                NewInput = [];
+
+            end
 
             % Update Input Objects
             for i = 1:NumInputVars

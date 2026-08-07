@@ -25,7 +25,7 @@ classdef gmt_Properties
         function [obj] = gmt_Properties(obj_in)
 
             % Compute Graph Size
-            obj.Ne = length(obj_in.EdgeMatrix); 
+            obj.Ne = size(obj_in.EdgeMatrix,1); 
             obj.Nv = max(obj_in.EdgeMatrix(:));
 
             % Compute Incident Matrix 

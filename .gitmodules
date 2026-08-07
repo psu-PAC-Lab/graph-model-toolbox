@@ -1,0 +1,3 @@
+[submodule "graph-model-toolbox-internal.wiki"]
+	path = graph-model-toolbox-internal.wiki
+	url = https://github.com/psu-PAC-Lab/graph-model-toolbox-internal.wiki.git

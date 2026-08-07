@@ -21,9 +21,9 @@ classdef gmt_Inverter < gmt_Graph
             Vertex(6) = gmt_Vertex("Sink Temperature","x","External",true,"units","K");
 
             % Define Edge 
-            Edge(1) = gmt_Edge("Input Voltage to Current Conversion","u1*sqrt(3/2)*xt*xh");
-            Edge(2) = gmt_Edge("Source Current to Voltage","xt*xh");
-            Edge(3) = gmt_Edge("Sink Voltage to Current","xt*xh");
+            Edge(1) = gmt_Edge("Source Voltage to Current Conversion","u1*sqrt(3/2)*xt*xh");
+            Edge(2) = gmt_Edge("Current from Source Voltage","xt*xh");
+            Edge(3) = gmt_Edge("Voltage to Sink Current","xt*xh");
             Edge(4) = gmt_Edge("Electrical Losses","u1*Ri*xt^2");
             Edge(5) = gmt_Edge("Sink Heat Transfer","(1/Ru)*(xt-xh)");
 
@@ -35,24 +35,20 @@ classdef gmt_Inverter < gmt_Graph
                           3, 6];
 
             % Define Default Model Parameterization 
-            Parameter(1) = gmt_Parameter("Thermal Losses","Ri",0.0808);
-            Parameter(2) = gmt_Parameter("Thermal Capacity","Cp",10000);
-            Parameter(3) = gmt_Parameter("Capacitance","C",0.1);
-            Parameter(4) = gmt_Parameter("Inductance","L",0.01);
-            Parameter(5) = gmt_Parameter("Convection Resistance","Ru",0.0808);
+            Parameter(1) = gmt_Parameter("Thermal Losses","Ri",0.0808,"units","ohm");
+            Parameter(2) = gmt_Parameter("Thermal Capacity","Cp",10000,"Units","J/(kg*K)");
+            Parameter(3) = gmt_Parameter("Capacitance","C",0.1,"units","F");
+            Parameter(4) = gmt_Parameter("Inductance","L",0.01,"units","H");
+            Parameter(5) = gmt_Parameter("Convection Resistance","Ru",0.0808,"units","ohm");
 
             % Define Model Input  
             Input(1) = gmt_Input("u1","Inverter Duty Cycle");
 
-            % Define Available Connection Ports 
-            Port(1) = gmt_Port("EdgeConnection",2,"Electrical");
+            % Define Available Connection Ports
+            Port(1) = gmt_Port("EdgeConnection",1,"Electrical");
             Port(2) = gmt_Port("EdgeConnection",3,"Electrical");
             Port(3) = gmt_Port("EdgeConnection",5,"Thermal");
-            Port(4) = gmt_Port("VertexConnection",1,"Electrical");
-            Port(5) = gmt_Port("VertexConnection",2,"Electrical");
-            Port(6) = gmt_Port("VertexConnection",4,"Electrical");
-            Port(7) = gmt_Port("VertexConnection",5,"Electrical");
-            Port(8) = gmt_Port("VertexConnection",6,"Thermal");
+            Port(4) = gmt_Port("VertexConnection",6,"Thermal");
 
             % Creates Inverter Object 
             obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,Input,Port,varargin{:});

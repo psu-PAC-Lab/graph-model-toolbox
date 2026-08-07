@@ -236,7 +236,7 @@ classdef gmt_Parameter
             switch true 
 
                 % Lookup Function Case 
-                case contains(Variable, 'interp')
+                case contains(Variable, 'interp') || contains(Variable, 'lookup')
                     obj.ParameterType = gmtEnumE.gmt_ParameterType.Lookup;
                     lookupDim_tmp = extractBefore(extractAfter(Variable,"interp"),"(");
                     is_digit_array = isstrprop(lookupDim_tmp, 'digit');
@@ -255,6 +255,7 @@ classdef gmt_Parameter
                     % if ~isempty(Opts)
                     %     obj.TableOpts = Opts;
                     % end
+
                 % Neural Network Case     
                 case contains(Variable, 'net')
                     obj.ParameterType = gmtEnumE.gmt_ParameterType.Neural_Network;
@@ -265,8 +266,17 @@ classdef gmt_Parameter
 
                 % All others assume scalars     
                 otherwise
-                    obj.ParameterType = gmtEnumE.gmt_ParameterType.Scalar;
-                    obj.Data = Data;
+                    if obj.Expression 
+
+                        obj.ParameterType = gmtEnumE.gmt_ParameterType.Expression;
+                        obj.Data = Data;
+
+                    else
+
+                        obj.ParameterType = gmtEnumE.gmt_ParameterType.Scalar;
+                        obj.Data = Data;
+
+                    end
 
             end
                           

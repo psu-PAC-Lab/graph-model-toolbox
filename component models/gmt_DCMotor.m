@@ -34,27 +34,25 @@ classdef gmt_DCMotor < gmt_Graph
                           3, 5];
 
             % Define Default Model Parameterization 
-            Parameter(1) = gmt_Parameter("Rotational Inertia","J",1.09*10^-4);
-            Parameter(2) = gmt_Parameter("DC Motor Specific Heat","Cp",60);
-            Parameter(3) = gmt_Parameter("Motor Inductance","L",1.252192537082724e-05);
-            Parameter(4) = gmt_Parameter("Friction Coefficient b","b",1.89435163576232e-05);
-            Parameter(5) = gmt_Parameter("Friction Coefficient b","c",0.000234355495215172);
-            Parameter(6) = gmt_Parameter("Motor Armature Resistance","Ra",0.013461960749493);
-            Parameter(7) = gmt_Parameter("Motor Torque Constant","Kt",0.009688163543703);
-            Parameter(8) = gmt_Parameter("Thermal Convection Resistance","Ru",0.009688163543703);
+            Parameter(1) = gmt_Parameter("Rotational Inertia","J",1.09*10^-4,"units","(kg*m^2)");
+            Parameter(2) = gmt_Parameter("DC Motor Specific Heat","Cp",60,"units","J/(kg*K)");
+            Parameter(3) = gmt_Parameter("Motor Inductance","L",1.252192537082724e-05,"units","H");
+            Parameter(4) = gmt_Parameter("Friction Coefficient b","b",1.89435163576232e-05,"units","N*m*(s/rad)^2");
+            Parameter(5) = gmt_Parameter("Friction Coefficient c","c",0.000234355495215172,"units","N*m*(s/rad)");
+            Parameter(6) = gmt_Parameter("Motor Armature Resistance","Ra",0.013461960749493,"units","ohm");
+            Parameter(7) = gmt_Parameter("Motor Torque Constant","Kt",0.009688163543703,"units","(N*m)/A");
+            Parameter(8) = gmt_Parameter("Thermal Convection Resistance","Ru",0.009688163543703,"units","K/W");
 
             % Define Input
+            Input = [];
 
             % Define Connection Port Object Array 
             Port(1) = gmt_Port("EdgeConnection",4,"Electrical");
             Port(2) = gmt_Port("EdgeConnection",5,"Thermal");
-            Port(3) = gmt_Port("VertexConnection",1,"Electrical");
-            Port(4) = gmt_Port("VertexConnection",2,"Thermal");
-            Port(5) = gmt_Port("VertexConnection",4,"Electrical");
-            Port(6) = gmt_Port("VertexConnection",5,"Thermal");
+            Port(3) = gmt_Port("VertexConnection",2,"Rotational");
 
             % Creates DC Motor Object 
-            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,[],Port,varargin{:});
+            obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,Input,Port,varargin{:});
 
         end
     end

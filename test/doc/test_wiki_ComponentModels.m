@@ -3,8 +3,8 @@ classdef test_wiki_ComponentModels < gmt_WikiTestBase
     methods (Test)
 
         function test_fileExists(tc)
-            tc.assertTrue(isfile(fullfile(tc.WikiDir, 'Component-Models.md')), ...
-                'Component-Models.md does not exist.')
+            tc.assertTrue(isfile(fullfile(tc.WikiDir, 'Component-Library.md')), ...
+                'Component-Library.md does not exist.')
         end
 
         function test_allThreeComponentsDocumented(tc)

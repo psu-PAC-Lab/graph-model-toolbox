@@ -12,7 +12,7 @@ classdef gmt_SplitJunction < gmt_Graph
         %% Constructor Method
         function obj = gmt_SplitJunction(ObjectName,n_in,n_out,varargin)
 
-            Vertex(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*Rho*x_dot","units","K");
+            Vertex(1) = gmt_Vertex("Junction Fluid Temperature","cp_f*V*rho_f*x_dot","units","K");
             
             % Define Vertices 
             for i = 1:n_in
@@ -45,9 +45,9 @@ classdef gmt_SplitJunction < gmt_Graph
                                 [ones(n_out,1),(n_in+2:n_in+n_out+1)']];
              
             % Define Default Model Parameterization 
-            Parameter(1) = gmt_Parameter("Fluid Specific Heat","cp_f",3300,"Units","kJ/(kg*K)","Common",true);
+            Parameter(1) = gmt_Parameter("Fluid Specific Heat","cp_f",3300,"Units","J/(kg*K)","Common",true);
             Parameter(2) = gmt_Parameter("Volume","V",0.002,"Units","m^3");
-            Parameter(3) = gmt_Parameter("Fluid Density","Rho",1090,"Units","kg/(m^3)","Common",true);
+            Parameter(3) = gmt_Parameter("Fluid Density","rho_f",1090,"Units","kg/(m^3)","Common",true);
 
             % Define Available Connection Ports
             NumEdges = length(Edge);

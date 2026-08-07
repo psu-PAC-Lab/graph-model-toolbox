@@ -26,6 +26,8 @@ classdef gmt_Plotting
             % Input parsing
             p = inputParser;
             addParameter(p, 'SimplifyLabels', false, @islogical);
+            addParameter(p, 'EdgeLabelsOnly', false, @islogical);
+            addParameter(p, 'VertexLabelsOnly', false, @islogical);
             parse(p, varargin{:});
             nodeFontSize = 10;
             edgeFontSize = 10;
@@ -101,18 +103,26 @@ classdef gmt_Plotting
             labelStrings = GraphObj.DiGraph.Nodes.NodeLabel;
             
             % Simplify to just V# and E# if requested
-            if p.Results.SimplifyLabels
-                nNodes = numel(labelStrings);
-                for i = 1:nNodes
-                    labelStrings{i} = sprintf('V%d', i);
+            nNodes = numel(labelStrings);
+            nEdges = numel(GraphObj.DiGraph.Edges.EdgeLabel);
+            edgeLabelStrings = GraphObj.DiGraph.Edges.EdgeLabel;
+
+            changeLabels = any([p.Results.SimplifyLabels,p.Results.EdgeLabelsOnly,p.Results.VertexLabelsOnly]);
+
+            if changeLabels
+
+                if p.Results.SimplifyLabels || p.Results.EdgeLabelsOnly
+                    for i = 1:nNodes
+                        labelStrings{i} = sprintf('V%d', i);
+                    end
                 end
-                nEdges = numel(GraphObj.DiGraph.Edges.EdgeLabel);
-                edgeLabelStrings = cell(nEdges, 1);
-                for e = 1:nEdges
-                    edgeLabelStrings{e} = sprintf('E%d', e);
+
+                if p.Results.SimplifyLabels || p.Results.VertexLabelsOnly
+                    for e = 1:nEdges
+                        edgeLabelStrings{e} = sprintf('E%d', e);
+                    end
                 end
-            else
-                edgeLabelStrings = GraphObj.DiGraph.Edges.EdgeLabel;
+                
             end
             nNodes       = numnodes(G);
             labelHandles = gobjects(1, nNodes);

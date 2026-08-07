@@ -7,5 +7,6 @@ classdef gmt_ParameterType
         Scalar
         Lookup 
         Neural_Network
+        Expression
     end
 end

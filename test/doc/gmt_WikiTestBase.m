@@ -59,8 +59,9 @@ classdef (Abstract) gmt_WikiTestBase < matlab.unittest.TestCase
             % Returns '' if no such folder is found within 20 levels.
             wikiDir = '';
             current = startDir;
+            current = fileparts(fileparts(current));
             for k = 1:20
-                candidate = fullfile(current, 'wiki');
+                candidate = fullfile(current, 'graph-model-toolbox-internal.wiki');
                 if isfolder(candidate)
                     wikiDir = candidate;
                     return

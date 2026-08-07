@@ -37,7 +37,7 @@ classdef gmt_Battery < gmt_Graph
             Vertex(4) = gmt_Vertex("Cell Temperature","Np*Ns*Cc*x_dot","units","K");
             Vertex(5) = gmt_Vertex("Surface Temperature","Np*Ns*Cs*x_dot","units","K");
             Vertex(6) = gmt_Vertex("Sink Temperature","x","External",true,"units","K");
-            Vertex(7) = gmt_Vertex("Source Current","x","External",true,"units","A");
+            Vertex(7) = gmt_Vertex("Battery Current","x_dot","External",true,"units","A");
 
             % Define Edge 
             Edge(1) = gmt_Edge("Cell 1 Thermal Transfer","(xt^2)/R1"); 
@@ -103,52 +103,49 @@ classdef gmt_Battery < gmt_Graph
             end
 
             % Capacitance Cell 1
-            Parameter(3) = gmt_Parameter("Cell 1 Capacitance - d","C1d = interp2(Temp,RC_SOC_d,C1_d,"+tm_tmp+",x1,'linear')",cell);
-            Parameter(4) = gmt_Parameter("Cell 1 Capacitance - c","C1c = interp2(Temp,RC_SOC_c,C1_c,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(5) = gmt_Parameter("Cell 1 Capacitance","C1 = ((C1d-C1c)/(1+exp(-50*x7)))+C1c",[]);
+            Parameter(3)  = gmt_Parameter("Cell 1 Capacitance - d","C1d = gmt_lookup2D(Temp,RC_SOC_d,C1_d',"+tm_tmp+",x1)",cell,"units","F");
+            Parameter(4)  = gmt_Parameter("Cell 1 Capacitance - c","C1c = gmt_lookup2D(Temp,RC_SOC_c,C1_c',"+tm_tmp+",x1)",[],"units","F");
+            Parameter(5)  = gmt_Parameter("Cell 1 Capacitance","C1 = ((C1d-C1c)/(1+exp(-50*x7)))+C1c",[],"units","F");
             
             % Capacitance Cell 2
-            Parameter(6) = gmt_Parameter("Cell 2 Capacitance - d","C2d = interp2(Temp,RC_SOC_d,C2_d,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(7) = gmt_Parameter("Cell 2 Capacitance - c","C2c = interp2(Temp,RC_SOC_c,C2_c,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(8) = gmt_Parameter("Cell 2 Capacitance","C2 = ((C2d-C2c)/(1+exp(-50*x7)))+C2c",[]);
+            Parameter(6)  = gmt_Parameter("Cell 2 Capacitance - d","C2d = gmt_lookup2D(Temp,RC_SOC_d,C2_d',"+tm_tmp+",x1)",[],"units","F");
+            Parameter(7)  = gmt_Parameter("Cell 2 Capacitance - c","C2c = gmt_lookup2D(Temp,RC_SOC_c,C2_c',"+tm_tmp+",x1)",[],"units","F");
+            Parameter(8)  = gmt_Parameter("Cell 2 Capacitance","C2 = ((C2d-C2c)/(1+exp(-50*x7)))+C2c",[],"units","F");
             
             % Resistance Cell 1
-            Parameter(9) = gmt_Parameter("Cell 1 Resistance","R1d = interp2(Temp,RC_SOC_d,R1_d,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(10) = gmt_Parameter("Cell 1 Resistance","R1c = interp2(Temp,RC_SOC_c,R1_c,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(11) = gmt_Parameter("Cell 1 Resistance","R1 = ((R1d-R1c)/(1+exp(-50*x7)))+R1c",[]);
+            Parameter(9)  = gmt_Parameter("Cell 1 Resistance","R1d = gmt_lookup2D(Temp,RC_SOC_d,R1_d',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(10) = gmt_Parameter("Cell 1 Resistance","R1c = gmt_lookup2D(Temp,RC_SOC_c,R1_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(11) = gmt_Parameter("Cell 1 Resistance","R1 = ((R1d-R1c)/(1+exp(-50*x7)))+R1c",[],"units","ohm");
 
             % Resistance Cell 2
-            Parameter(12) = gmt_Parameter("Cell 1 Resistance","R2d = interp2(Temp,RC_SOC_d,R2_d,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(13) = gmt_Parameter("Cell 1 Resistance","R2c = interp2(Temp,RC_SOC_c,R2_c,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(14) = gmt_Parameter("Cell 1 Resistance","R2 = ((R2d-R2c)/(1+exp(-50*x7)))+R2c",[]);
+            Parameter(12) = gmt_Parameter("Cell 1 Resistance","R2d = gmt_lookup2D(Temp,RC_SOC_d,R2_d',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(13) = gmt_Parameter("Cell 1 Resistance","R2c = gmt_lookup2D(Temp,RC_SOC_c,R2_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(14) = gmt_Parameter("Cell 1 Resistance","R2 = ((R2d-R2c)/(1+exp(-50*x7)))+R2c",[],"units","ohm");
 
             % Resistance Cell Series
-            Parameter(15) = gmt_Parameter("Internal Series Resistance","Rsd = interp2(Temp,RC_SOC_d,Rs_d,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(16) = gmt_Parameter("Internal Series Resistance","Rsc = interp2(Temp,RC_SOC_c,Rs_c,"+tm_tmp+",x1,'linear')",[]);
-            Parameter(17) = gmt_Parameter("Internal Series Resistance","Rs = ((Rsd-Rsc)/(1+exp(-50*x7)))+Rsc",[]);
+            Parameter(15) = gmt_Parameter("Internal Series Resistance","Rsd = gmt_lookup2D(Temp,RC_SOC_d,Rs_d',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(16) = gmt_Parameter("Internal Series Resistance","Rsc = gmt_lookup2D(Temp,RC_SOC_c,Rs_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(17) = gmt_Parameter("Internal Series Resistance","Rs = ((Rsd-Rsc)/(1+exp(-50*x7)))+Rsc",[],"units","ohm");
 
             % Open Circuit Voltage
-            Parameter(18) = gmt_Parameter("Open Circuit Voltage","Vocv_ = Ns*interp1(V_SOC,Vocv,x1)",[]);
+            Parameter(18) = gmt_Parameter("Open Circuit Voltage","Vocv_ = Ns*gmt_lookup1D(V_SOC,Vocv,x1)",[],"units","V");
 
             % Thermal Capacitance 
-            Parameter(19) = gmt_Parameter("Cell Thermal Capacitance","Cc",62.7);
-            Parameter(20) = gmt_Parameter("Surface Thermal Capacitance","Cs",4.5);
+            Parameter(19) = gmt_Parameter("Cell Thermal Capacitance","Cc",62.7,"Units","J/(kg*K)");
+            Parameter(20) = gmt_Parameter("Surface Thermal Capacitance","Cs",4.5,"Units","J/(kg*K)");
 
             % Battery Capacity 
-            Parameter(21) = gmt_Parameter("Battery Capacity","Bcap",21.3);
+            Parameter(21) = gmt_Parameter("Battery Capacity","Bcap",21.3,"Units","Ah");
 
             % Conduction Resistance 
-            Parameter(22) = gmt_Parameter("Theraml Conductivity","Rc",1.94);
+            Parameter(22) = gmt_Parameter("Theraml Conductivity","Rc",1.94,"Units","W/(m*K)");
 
             % Thermal Convection Resistance
-            Parameter(23) = gmt_Parameter("Thermal Convection Resistance","Ru",0.01);
+            Parameter(23) = gmt_Parameter("Thermal Convection Resistance","Ru",0.01,"Units","K/W");
 
             %% Define Available Connection Ports 
-            Port(1) = gmt_Port("EdgeConnection",8,"Thermal");
-            Port(2) = gmt_Port("VertexConnection",6,"Thermal");
-            Port(3) = gmt_Port("VertexConnection",7,"Electrical");
-            Port(4) = gmt_Port("VertexConnection",8,"Electrical");
-            Port(5) = gmt_Port("EdgeConnection",9,"Electrical");
+            Port(1) = gmt_Port("EdgeConnection",5,"Electrical");
+            Port(2) = gmt_Port("EdgeConnection",8,"Thermal");
 
             %% Creates Battery Object 
             obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,[],Port,varargin{:});

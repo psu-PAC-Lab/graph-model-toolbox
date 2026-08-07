@@ -319,6 +319,7 @@ classdef gmt_Vertex
                     obj.ComponentStateVariable = match_tmp;
                 else
                     statedep_tmp = setdiff(match_tmp,stateder_tmp);
+                    statedep_tmp = setdiff(statedep_tmp,"x");
                     obj.ComponentStateVariable = unique(statedep_tmp);
                 end
             end
@@ -328,7 +329,11 @@ classdef gmt_Vertex
             if isempty(stateind_tmp) && obj.NvSd > 0
                 stateind_tmp = stateder_tmp;
             elseif isempty(stateind_tmp) && ~isempty(match_tmp)
-                stateind_tmp = unique(match_tmp);
+                if numDependent == 0 
+                    stateind_tmp = unique(match_tmp);
+                else
+                    stateind_tmp = rmmissing(unique(extractBefore(match_tmp,digitsPattern)));
+                end
             end
 
             obj.NvS = length(unique(stateind_tmp));
@@ -353,6 +358,7 @@ classdef gmt_Vertex
 
             % Vertex Capacitance 
             if obj.StateType == gmtEnumE.gmt_StateType.Dynamic 
+                % Create temporary capacitance equation 
                 Capacitance_tmp = erase(obj.CapacitanceEq, obj.StateDerVariables);
                 % Create regular expression pattern to remove strings ending in math operator
                 pattern = "(" + strjoin(gmtEnumE.gmt_Symbols().Symbols, "|") + ")$";
@@ -364,7 +370,18 @@ classdef gmt_Vertex
                     obj.Capacitance = match_tmp;
                 end
             else
-                obj.Capacitance = "1";
+                % Create temporary capacitance equation 
+                pattern = '(?<![A-Za-z0-9_])' + obj.StateVariables + '(?![A-Za-z0-9_])';
+                Capacitance_tmp = regexprep(obj.CapacitanceEq, pattern, '');
+                % Create regular expression pattern to remove strings ending in math operator
+                pattern = "(" + strjoin(gmtEnumE.gmt_Symbols().Symbols, "|") + ")$";
+                % Run regular expression and remove operator if present at end of string             
+                match_tmp = regexprep(Capacitance_tmp, pattern, ""); 
+                if strlength(match_tmp) == 0 
+                    obj.Capacitance = "1";
+                else
+                    obj.Capacitance = match_tmp;
+                end
             end
 
         end

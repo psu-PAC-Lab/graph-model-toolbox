@@ -31,12 +31,15 @@ function [idxL, idxU, idxBias] = gmt_lookupAxis(xD,xL)
             deltaXd = xD(idxMid) - xL;
     
             if  deltaXd < 0
+                % lookup value above idxMid
                 idxU = idxMid + 1;
             elseif deltaXd > 0 
+                % lookup value below idxMid
                 idxL = idxMid - 1;
             else
-                idxU = idxMid;
-                idxL = idxU;
+                % lookup value matches idxMid
+                idxU = idxMid + 1;
+                idxL = idxMid;
                 break;
             end
         end    
