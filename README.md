@@ -183,14 +183,13 @@ See `gmtTutorial.mlx` for a live-script walkthrough covering:
 
 Full documentation is available in the repository Wiki:
 
-- [Quick Start](wiki/Quick-Start)
-- [Core Concepts](wiki/Core-Concepts)
-- [Toolbox Classes](wiki/Toolbox-Classes)
-- [Model Interaction](wiki/Model-Interaction)
-- [Component Library](wiki/Component-Models)
-- [Creating Systems](wiki/Creating-Systems)
-- [Simulating Systems](wiki/Simulating-Systems)
-- [Creating Components](wiki/Creating-Components)
+- [Quick Start](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Quick-Start)
+- [Core Concepts](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Core-Concepts)
+- [Toolbox Classes](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Toolbox-Classes)
+- [Component Library](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Component-Library)
+- [Creating Systems](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Creating-Systems)
+- [Simulating Systems](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Simulating-Systems)
+- [Creating Components](https://github.com/psu-PAC-Lab/graph-model-toolbox/wiki/Creating-Components)
 
 ## References
 
@@ -212,15 +211,46 @@ Use of this toolbox in published research should be cited as follows:
 
 J. M. Pisani, C. T. Aksland, P. M. Renkert, J. Broniszewski, V. Vyas, A. G. Alleyne, D. J. Docimo, J. P. Koeln, N. Jain, H. C. Pangborn, "Graph-based modeling, control, and optimization for multi-domain and multi-timescale energy systems," American Control Conference, 2026. ([arXiv](https://doi.org/10.48550/arXiv.2605.27017))
 
-## Latest Release (v1.3.0)
+## Release Log Notes
 
-**Released:** June 5, 2026
+### Latest Release (v1.4.1)
+
+**Released:** September 1st, 2026
 
 ### Highlights
+
+- Resolved connection bug related to heat exchanger model.
+- Updated model parameterization parsing to enable model swapping. 
+
+---
+
+<small>
+  
+**Release:** v1.4.0 <br>
+**Released:** August 7, 2026
+
+**Highlights**
+
+- Update component models for minor bugs related to labeling and units
+- Added verification step that checks user defined model parameterization variables against default model parameterization variables
+- Added dynamic to algebraic state variable conversion functionality using `gmt_Algebraic` function. Updates model with explicit DAE formulation including simulation scripts. 
+</small>
+
+---
+
+<small>
+
+**Release:** v1.3.0 <br>
+**Released:** June 5, 2026
+
+**Highlights**
 
 - Fixed minor issues related to edge labeling, unit labeling, and unused parameters
 - Updated Simulink library block for backward compatibility up to MATLAB R2023a
 - Introduced new cold plate and electrical bus component models
+</small>
+
+---
 
 ## License
 

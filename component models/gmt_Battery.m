@@ -104,31 +104,31 @@ classdef gmt_Battery < gmt_Graph
 
             % Capacitance Cell 1
             Parameter(3)  = gmt_Parameter("Cell 1 Capacitance - d","C1d = gmt_lookup2D(Temp,RC_SOC_d,C1_d',"+tm_tmp+",x1)",cell,"units","F");
-            Parameter(4)  = gmt_Parameter("Cell 1 Capacitance - c","C1c = gmt_lookup2D(Temp,RC_SOC_c,C1_c',"+tm_tmp+",x1)",[],"units","F");
+            Parameter(4)  = gmt_Parameter("Cell 1 Capacitance - c","C1c = gmt_lookup2D(Temp,RC_SOC_c,C1_c',"+tm_tmp+",x1)",cell,"units","F");
             Parameter(5)  = gmt_Parameter("Cell 1 Capacitance","C1 = ((C1d-C1c)/(1+exp(-50*x7)))+C1c",[],"units","F");
             
             % Capacitance Cell 2
-            Parameter(6)  = gmt_Parameter("Cell 2 Capacitance - d","C2d = gmt_lookup2D(Temp,RC_SOC_d,C2_d',"+tm_tmp+",x1)",[],"units","F");
-            Parameter(7)  = gmt_Parameter("Cell 2 Capacitance - c","C2c = gmt_lookup2D(Temp,RC_SOC_c,C2_c',"+tm_tmp+",x1)",[],"units","F");
+            Parameter(6)  = gmt_Parameter("Cell 2 Capacitance - d","C2d = gmt_lookup2D(Temp,RC_SOC_d,C2_d',"+tm_tmp+",x1)",cell,"units","F");
+            Parameter(7)  = gmt_Parameter("Cell 2 Capacitance - c","C2c = gmt_lookup2D(Temp,RC_SOC_c,C2_c',"+tm_tmp+",x1)",cell,"units","F");
             Parameter(8)  = gmt_Parameter("Cell 2 Capacitance","C2 = ((C2d-C2c)/(1+exp(-50*x7)))+C2c",[],"units","F");
             
             % Resistance Cell 1
-            Parameter(9)  = gmt_Parameter("Cell 1 Resistance","R1d = gmt_lookup2D(Temp,RC_SOC_d,R1_d',"+tm_tmp+",x1)",[],"units","ohm");
-            Parameter(10) = gmt_Parameter("Cell 1 Resistance","R1c = gmt_lookup2D(Temp,RC_SOC_c,R1_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(9)  = gmt_Parameter("Cell 1 Resistance","R1d = gmt_lookup2D(Temp,RC_SOC_d,R1_d',"+tm_tmp+",x1)",cell,"units","ohm");
+            Parameter(10) = gmt_Parameter("Cell 1 Resistance","R1c = gmt_lookup2D(Temp,RC_SOC_c,R1_c',"+tm_tmp+",x1)",cell,"units","ohm");
             Parameter(11) = gmt_Parameter("Cell 1 Resistance","R1 = ((R1d-R1c)/(1+exp(-50*x7)))+R1c",[],"units","ohm");
 
             % Resistance Cell 2
-            Parameter(12) = gmt_Parameter("Cell 1 Resistance","R2d = gmt_lookup2D(Temp,RC_SOC_d,R2_d',"+tm_tmp+",x1)",[],"units","ohm");
-            Parameter(13) = gmt_Parameter("Cell 1 Resistance","R2c = gmt_lookup2D(Temp,RC_SOC_c,R2_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(12) = gmt_Parameter("Cell 1 Resistance","R2d = gmt_lookup2D(Temp,RC_SOC_d,R2_d',"+tm_tmp+",x1)",cell,"units","ohm");
+            Parameter(13) = gmt_Parameter("Cell 1 Resistance","R2c = gmt_lookup2D(Temp,RC_SOC_c,R2_c',"+tm_tmp+",x1)",cell,"units","ohm");
             Parameter(14) = gmt_Parameter("Cell 1 Resistance","R2 = ((R2d-R2c)/(1+exp(-50*x7)))+R2c",[],"units","ohm");
 
             % Resistance Cell Series
-            Parameter(15) = gmt_Parameter("Internal Series Resistance","Rsd = gmt_lookup2D(Temp,RC_SOC_d,Rs_d',"+tm_tmp+",x1)",[],"units","ohm");
-            Parameter(16) = gmt_Parameter("Internal Series Resistance","Rsc = gmt_lookup2D(Temp,RC_SOC_c,Rs_c',"+tm_tmp+",x1)",[],"units","ohm");
+            Parameter(15) = gmt_Parameter("Internal Series Resistance","Rsd = gmt_lookup2D(Temp,RC_SOC_d,Rs_d',"+tm_tmp+",x1)",cell,"units","ohm");
+            Parameter(16) = gmt_Parameter("Internal Series Resistance","Rsc = gmt_lookup2D(Temp,RC_SOC_c,Rs_c',"+tm_tmp+",x1)",cell,"units","ohm");
             Parameter(17) = gmt_Parameter("Internal Series Resistance","Rs = ((Rsd-Rsc)/(1+exp(-50*x7)))+Rsc",[],"units","ohm");
 
             % Open Circuit Voltage
-            Parameter(18) = gmt_Parameter("Open Circuit Voltage","Vocv_ = Ns*gmt_lookup1D(V_SOC,Vocv,x1)",[],"units","V");
+            Parameter(18) = gmt_Parameter("Open Circuit Voltage","Vocv_ = Ns*gmt_lookup1D(V_SOC,Vocv,x1)",cell,"units","V");
 
             % Thermal Capacitance 
             Parameter(19) = gmt_Parameter("Cell Thermal Capacitance","Cc",62.7,"Units","J/(kg*K)");
@@ -138,7 +138,7 @@ classdef gmt_Battery < gmt_Graph
             Parameter(21) = gmt_Parameter("Battery Capacity","Bcap",21.3,"Units","Ah");
 
             % Conduction Resistance 
-            Parameter(22) = gmt_Parameter("Theraml Conductivity","Rc",1.94,"Units","W/(m*K)");
+            Parameter(22) = gmt_Parameter("Thermal Conductivity","Rc",1.94,"Units","W/(m*K)");
 
             % Thermal Convection Resistance
             Parameter(23) = gmt_Parameter("Thermal Convection Resistance","Ru",0.01,"Units","K/W");

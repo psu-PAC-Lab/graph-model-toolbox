@@ -200,6 +200,7 @@ classdef gmt_Graph
         Disturbances string = [] % String array of system disturbance variable names
         Optimization string = [] % String array of system optimization variable names
         ModelParameters gmt_Parameter % Model parameters object to manage model parameterization  
+        ModelExergy gmt_Exergy % Array of exergy equations 
         SystemEquations = struct("FunctionInputs",[],"LHS",[],"RHS",[],"Expression",[])  % System of equations with parameterization 
         SystemEquationsSubs = struct("FunctionInputs",[],"LHS",[],"RHS",[],"Expression",[])  % System of equations with parameterization with variable substitution  
         InitialConditions double 
@@ -932,9 +933,38 @@ classdef gmt_Graph
                 % Determine Variables for Substitution 
                 sub_idx = find([obj.ModelParameters.Optimization] == false);
 
-                obj.SystemEquationsSubs.LHS = obj.SystemEquations.LHS;
-                obj.SystemEquationsSubs.RHS = subs(rhs(sym_sys_tmp),str2sym([obj.ModelParameters(sub_idx).Variable]),[obj.ModelParameters(sub_idx).Data]);
-                obj.SystemEquationsSubs.Expression = subs(sym_sys_tmp,str2sym([obj.ModelParameters(sub_idx).Variable]),[obj.ModelParameters(sub_idx).Data]);
+                % Determine Parameters that use structure 
+                struct_idx = [];
+                for i = 1:length(obj.ModelParameters)
+                    
+                    if isstruct(obj.ModelParameters(i).Data)
+                        struct_idx = [struct_idx, i];
+                    end
+
+                end
+
+                sub_idx_fin = setdiff(sub_idx,struct_idx);
+
+                if ~isempty(sub_idx_fin)
+                    obj.SystemEquationsSubs.LHS = obj.SystemEquations.LHS;
+                    obj.SystemEquationsSubs.RHS = subs(rhs(sym_sys_tmp),str2sym([obj.ModelParameters(sub_idx_fin).Variable]),[obj.ModelParameters(sub_idx_fin).Data]);
+                    obj.SystemEquationsSubs.Expression = subs(sym_sys_tmp,str2sym([obj.ModelParameters(sub_idx_fin).Variable]),[obj.ModelParameters(sub_idx_fin).Data]);
+                else 
+                    obj.SystemEquationsSubs.LHS = obj.SystemEquations.LHS;
+                    obj.SystemEquationsSubs.RHS = obj.SystemEquations.RHS;
+                    obj.SystemEquationsSubs.Expression = obj.SystemEquations.Expression;
+                end
+
+                % sub in structure values for expression model parameters 
+                for i = 1:length(struct_idx)
+                    struct_tmp = obj.ModelParameters(struct_idx(i)).Data;
+                    fieldnames_tmp = fieldnames(struct_tmp);
+                    for j = 1:length(struct_tmp)
+                        obj.SystemEquationsSubs.RHS = subs(obj.SystemEquationsSubs.RHS,str2sym(fieldnames_tmp{j}),struct_tmp.(fieldnames_tmp{j}));
+                        obj.SystemEquationsSubs.Expression = subs(obj.SystemEquationsSubs.Expression,(fieldnames_tmp{j}),struct_tmp.(fieldnames_tmp{j}));
+                    end
+                end
+
                 obj.SystemEquationsSubs.FunctionInputs = symvar(obj.SystemEquationsSubs.RHS);
 
             end
@@ -961,6 +991,8 @@ classdef gmt_Graph
             end
 
             %% Check model parameterization 
+
+            % determine default model parameters
             mdlParameters_exp = string(symvar(obj.SystemEquations.RHS));
             stateIdx = ismember(mdlParameters_exp,obj.States);
             disturbIdx = ismember(mdlParameters_exp,obj.Disturbances);
@@ -968,31 +1000,29 @@ classdef gmt_Graph
             removeIdx = stateIdx + disturbIdx + inputIdx;
             mdlParameters_exp = mdlParameters_exp(~removeIdx);
 
-            mdlParameters_nonscalarIdx = [obj.ModelParameters.ParameterType] ~= gmtEnumE.gmt_ParameterType.Scalar;
-            mdlParameters_expressionIdx = [obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Expression;
-
+            % determine user defined model parameters 
+            mdlParameters_nonexpressionIdx = find([obj.ModelParameters.Expression] == false); % non expression defined variables 
+            mdlParameters_expressionIdx = find([obj.ModelParameters.Expression] == true); % expression defined variables 
+            mdlParameters_lookupIdx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Lookup);      % expression lookup variables 
+            mdlParameters_netIdx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Neural_Network); % expression neural networks variables 
+            mdlParameters_expressionNumerical_idx  = [mdlParameters_lookupIdx,mdlParameters_netIdx]; % numerical expression variables
+            mdlParameters_expressionAnalytical_idx = setdiff(mdlParameters_expressionIdx,mdlParameters_expressionNumerical_idx); % analytical expresson variables 
+            
             mdlParameters_def = [];
 
-            if any(mdlParameters_nonscalarIdx)
-                mdlParameters_def_scalar = [obj.ModelParameters(~mdlParameters_nonscalarIdx).Variable];
-                mdlParameters_def_nonscalar = [obj.ModelParameters(mdlParameters_nonscalarIdx).Variable];
-                
-                for z = 1:length(mdlParameters_def_nonscalar)
-                    mdlParameters_def_tmp = strtrim(extractBefore(mdlParameters_def_nonscalar(z),"="));
-                    mdlParameters_def = [mdlParameters_def, mdlParameters_def_tmp];
-                end
-                
-                mdlParameters_def = [mdlParameters_def,mdlParameters_def_scalar];
-
-            else
-                mdlParameters_def = [obj.ModelParameters.Variable];
+            % non expression based model parameters i.e. scalars 
+            if any(mdlParameters_nonexpressionIdx)
+                mdlParameterss_def_tmp = [obj.ModelParameters(mdlParameters_nonexpressionIdx).Variable];
+                mdlParameters_def = [mdlParameters_def, mdlParameterss_def_tmp];
             end
 
             varsIgnore = gmtEnumE.gmt_Funcs().Funcs;
 
-            if any(mdlParameters_expressionIdx)
+            % analytical based expressions 
+            mdlParameters_expressionVars = [];
+            if any(mdlParameters_expressionAnalytical_idx)
 
-                mdlParameters_def_expression = [obj.ModelParameters(mdlParameters_expressionIdx).Variable];
+                mdlParameters_def_expression = [obj.ModelParameters(mdlParameters_expressionAnalytical_idx).Variable];
 
                 for z = 1:length(mdlParameters_def_expression)
                     mdlParameters_def_expression_tmp = extractAfter(mdlParameters_def_expression(z),"=");
@@ -1005,17 +1035,30 @@ classdef gmt_Graph
                     mdlParameters_expressionVars{z} = varsTmp;
 
                 end
-                
-                mdlParameters_expressionVars = unique([mdlParameters_expressionVars{:}]);
-                mdlParameters_exp = [mdlParameters_exp,mdlParameters_expressionVars];
 
+                mdlParameters_expressionVars = unique([mdlParameters_expressionVars{:}]);
+
+            end
+
+            % numerical based expressions 
+            if any(mdlParameters_expressionIdx)
+                for i = 1:length(mdlParameters_expressionIdx)
+                    idx_tmp = mdlParameters_expressionIdx(i);
+                    mdlParameters_def_tmp = strtrim(extractBefore(obj.ModelParameters(idx_tmp).Variable,"="));
+                    mdlParameters_def = [mdlParameters_def, mdlParameters_def_tmp];
+                end
+            end
+
+            % difference between intermediate parameters and total defined model parameters 
+            if ~isempty(mdlParameters_expressionVars)
+                mdlParameters_def = setdiff(mdlParameters_def,mdlParameters_expressionVars);
             end
 
             mdlParameters_underdefined = any(~ismember(mdlParameters_exp,mdlParameters_def));
             mdlParameters_overdefined  = any(~ismember(mdlParameters_def,mdlParameters_exp));
 
-            % assert(~mdlParameters_underdefined,"model parameterization is underdefined")
-            % assert(~mdlParameters_overdefined ,"model parameterization is overdefined")
+            assert(~mdlParameters_underdefined,"model parameterization is underdefined")
+            assert(~mdlParameters_overdefined ,"model parameterization is overdefined")
 
             % Build Simulation Code
             %% MATLAB Function Header and Footer
@@ -1027,7 +1070,16 @@ classdef gmt_Graph
                
                 % Parameter Indices 
                 ScalarParams_idx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Scalar);
-                ExpressParams_idx = find([obj.ModelParameters.Expression] == true);
+   
+                ExpressParams_idx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Expression);
+                ExpressParams_struct_idx = [];
+                for i = 1:length(ExpressParams_idx)
+                     idx_tmp = ExpressParams_idx(i);
+                     if isstruct(obj.ModelParameters(idx_tmp).Data)
+                        ExpressParams_struct_idx = [ExpressParams_struct_idx, idx_tmp];
+                     end
+                end
+
                 LookupParams_idx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Lookup);
                 NNParams_idx = find([obj.ModelParameters.ParameterType] == gmtEnumE.gmt_ParameterType.Neural_Network);
     
@@ -1076,72 +1128,128 @@ classdef gmt_Graph
 
             % Scalars 
             ScalarParams_idx_setdiff = setdiff(ScalarParams_idx,ExpressParams_idx);
-            scalarParams_idx_inter = setdiff(ScalarParams_idx_setdiff,optvars_idx);
+            scalarParams_idx_inter   = setdiff(ScalarParams_idx_setdiff,optvars_idx);
             sysfun_mfile_scalars_data = [obj.ModelParameters(scalarParams_idx_inter).Variable]' + " = " + [obj.ModelParameters(scalarParams_idx_inter).Data]' + ";";
-            sysfun_mfile_scalars_express = [obj.ModelParameters(ExpressParams_idx).Variable]' + ";";
+            
+            sysfun_mfile_scalars_express = [];
+            for i = 1:length(ExpressParams_struct_idx)
+                idx_tmp = ExpressParams_struct_idx(i);
+                struct_tmp = obj.ModelParameters(idx_tmp).Data;
+                fieldnames_tmp = fieldnames(struct_tmp);
+                for j = 1:numel(fieldnames_tmp)
+                    sysfun_mfile_scalars_express_tmp = fieldnames_tmp{j} + " = " + string(struct_tmp.(fieldnames_tmp{j}));
+                    sysfun_mfile_scalars_express = [sysfun_mfile_scalars_express; sysfun_mfile_scalars_express_tmp];
+                end
+            end
 
-            % Lookup
+            sysfun_mfile_scalars_express = [sysfun_mfile_scalars_express; [obj.ModelParameters(ExpressParams_idx).Variable]' + ";"];
+
+            % lookup
             if ~isempty(LookupParams_idx)
 
+                % lookup data fieldnames 
                 fields = fieldnames([obj.ModelParameters(LookupParams_idx).Data]);
+                lookupFieldNames_Num = length(fields);
 
-                y = 1;
-                for i = 1:length(LookupParams_idx)
-                    idx = LookupParams_idx(i);
-                    if ~isempty(obj.ModelParameters(idx).Data)
-                        datadefined(y) = idx;
-                        y = y + 1;
-                    end
-
-                end
-
-                mFileLines = cell(length(fields), 1);
+                % lookup function variables 
+                lookupVariables = [obj.ModelParameters(LookupParams_idx).Variable]';
+                lookupVariables_LHS = strtrim(extractBefore(lookupVariables,"="));
+                lookupVariables_RHS = strtrim(extractAfter(lookupVariables,"="));
+                lookupVariables_FuncName = strtrim(extractBefore(lookupVariables_RHS,"("));
                 
-                % Loop through fields to create "LHS = RHS;" strings
-                y = 1;
-                for j = 1:length(datadefined)
-                    idx = datadefined(j);
-                    for i = 1:numel(fields)
-                        fieldName = fields{i};
-                        val = obj.ModelParameters(idx).Data.(fieldName); % Dynamic access
+                for i = 1:length(lookupVariables_FuncName)
+                    lookupVariables_FuncInput = strtrim(extractAfter(lookupVariables_RHS(i),lookupVariables_FuncName(i)));
+                    lookupVariables_FuncInputs_tmp = eraseBetween(lookupVariables_FuncInput,1,1);
+                    lookupVariables_FuncInputs(i) = eraseBetween(lookupVariables_FuncInputs_tmp,strlength(lookupVariables_FuncInputs_tmp),strlength(lookupVariables_FuncInputs_tmp));
+                end
+
+                lookupVariables_cnt  = 0;
+                lookupVariables_Vars = [];
+                for i = 1:length(lookupVariables_RHS)
                     
-                        if ischar(val) || isstring(val)
-                            % Format: FieldName = 'StringData';
-                            rhs_ = sprintf("'%s'", val);
+                    lookupCode_FuncInputs  = split(lookupVariables_FuncInputs(i),",");
                     
-                        elseif isnumeric(val) || islogical(val)
-                            % Format: FieldName = [1 0; 0 1]; or FieldName = 5;
-                            % mat2str handles the brackets and semicolon for matrices
-                            rhs_ = mat2str(val);
-                    
-                        else
-                            % Fallback for empty or unsupported types
-                            rhs_ = '[]';
-                        end
-                    
-                        % Combine into the final assignment string
-                        mFileLines{y} = sprintf('%s = %s;', fieldName, rhs_);
-                        y = y + 1;
+
+                    for j = 1:length(lookupCode_FuncInputs)
+                        lookupCode_FuncInputs_tmp = lookupCode_FuncInputs(j);
+                        lookupCode_FuncInputs(j) = regexprep(lookupCode_FuncInputs_tmp, '''$', '');
                     end
+
+                    lookupCode_NumInputs   = length(lookupCode_FuncInputs);
+                    lookupCode_DataFields  = string(fieldnames([obj.ModelParameters(LookupParams_idx(i)).Data]));
+                    
+                    switch lookupCode_NumInputs
+
+                        case 3
+                            lookupVariables_cnt  = lookupVariables_cnt + lookupCode_NumInputs - 1;
+                            lookupVariables_tmp  = lookupCode_FuncInputs(1:2)';
+                            
+                        case 5
+                            lookupVariables_cnt  = lookupVariables_cnt + lookupCode_NumInputs - 2;
+                            lookupVariables_tmp  = lookupCode_FuncInputs(1:3)';
+
+                    end
+
+                    lookupCode_isDefined = all(ismember(lookupVariables_tmp,lookupCode_DataFields));
+                    assert(lookupCode_isDefined,"Parameter data is not defined")
+                    
+                    lookupVariables_Vars = [lookupVariables_Vars,lookupVariables_tmp];
+                    
                 end
 
-                sysfun_mfile_lookup_tmp = string(mFileLines);
+                % find unique names
+                [uniqueNames, ~, idx] = unique(lookupVariables_Vars);
+                uniqueNames_cnt = accumarray(idx, 1);
 
-                % Find if user specified function lookup outside of edge equation 
-                sysfun_lookup_func_idx_tmp = find(contains([obj.ModelParameters(LookupParams_idx).Variable],"="));
-                sysfun_lookup_func_idx = LookupParams_idx(sysfun_lookup_func_idx_tmp);
-
-                if ~isempty(sysfun_lookup_func_idx)
-                    sys_mfile_lookup2_tmp = [obj.ModelParameters(sysfun_lookup_func_idx).Variable]' + ";";
-                else
-                    sys_mfile_lookup2_tmp = [];
+                % find where variable is defined 
+                uniqueName_find = [];
+                for i = 1:length(uniqueNames)
+                    uniqueName_find_tmp = find(contains(lookupVariables_RHS,uniqueNames(i)));
+                    uniqueName_find{i} = LookupParams_idx(uniqueName_find_tmp);
                 end
 
-                sysfun_mfile_lookup = [sysfun_mfile_lookup_tmp;sys_mfile_lookup2_tmp];
+                % verify match datasets for same variable name
+                for i = 1:length(uniqueNames)
+                    uniqueName_idx  = uniqueName_find{i};
+                    uniqueName_name = uniqueNames(i);
+                    dataAxis = [];
+                    for j = 1:length(uniqueName_idx)
+                        dataTmp     = obj.ModelParameters(uniqueName_idx(j)).Data;
+                        dataAxis{j} = dataTmp.(uniqueName_name);
+                    end
+                    % compare data 
+                    dataMatch = [];
+                    for k = 1:length(dataAxis)
+                        for l = 1:length(dataAxis)
+                            dataMatch(k,l) = isequal(dataAxis{k},dataAxis{l});
+                        end
+                    end
+                    dataMatchFlg = all(all(dataMatch));
+                    assert(dataMatchFlg,"Model parameter lookupdata has shared name with unique data");
+                end
+
+                % create mfileCode data 
+                mfileCode_lookupData = [];
+                for i = 1:length(uniqueNames)
+                    uniqueName_tmp = uniqueNames(i);
+                    uniqueName_find_tmp = find(contains(lookupVariables_RHS,uniqueNames(i)));
+                    uniqueNameIdx = LookupParams_idx(uniqueName_find_tmp(1));
+                    mfileCode_lookupData_rhs = mat2str(obj.ModelParameters(uniqueNameIdx).Data.(uniqueName_tmp));
+                    mfileCode_lookupData_lhs = uniqueName_tmp + "=";
+                    mfileCode_lookupData_tmp = mfileCode_lookupData_lhs + mfileCode_lookupData_rhs;
+                    mfileCode_lookupData = [mfileCode_lookupData;mfileCode_lookupData_tmp];
+                end
+
+                % create mfileCode lookup functions 
+                mfileCode_lookupFunc = [obj.ModelParameters(LookupParams_idx).Variable]';
+              
+                % final lookup function and data code
+                sysfun_mfile_lookup = mfileCode_lookupData + ";";
 
             else 
 
                 sysfun_mfile_lookup = [];
+                mfileCode_lookupFunc = [];
 
             end
 
@@ -1150,6 +1258,7 @@ classdef gmt_Graph
             % Parameterization Packaging
             sysfun_mfile_param = [sysfun_mfile_scalars_data;...
                                   sysfun_mfile_lookup;...
+                                  mfileCode_lookupFunc; ...
                                   sysfun_mfile_scalars_express];
 
             %% MATLAB Function Body 
@@ -1270,8 +1379,17 @@ classdef gmt_Graph
             % Regular expression for variable parsing 
             OldInputsVars = regexp(OldInputs, '[a-zA-Z]\d+', 'match');
             NewInputsVars = regexp(NewInputs, '[a-zA-Z]\d+', 'match');
-            OldInputsVars_vector = [OldInputsVars{:}];
-            NewInputsVars_vector = [NewInputsVars{:}];
+            if length(OldInputsVars) == 1
+                OldInputsVars_vector = string(OldInputsVars);
+            else
+                OldInputsVars_vector = [OldInputsVars{:}];
+            end
+            
+            if length(NewInputsVars) == 1
+                NewInputsVars_vector = string(NewInputsVars);
+            else
+                NewInputsVars_vector = [NewInputsVars{:}];
+            end
 
             % Validate variables are function of original system 
             OldInputsValid = all(ismember(OldInputsVars_vector, SysInputsVars));
@@ -1984,8 +2102,8 @@ classdef gmt_Graph
                     end
 
                     % primary object
-                    objB_hV_removeFlg = PrimaryObj{i}.Vertices(objB_hVn).VertexType == gmtEnumE.gmt_VertexType.External;
-                    objB_tV_removeFlg = PrimaryObj{i}.Vertices(objB_tVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    objB_hV_removeFlg = SecondaryObj{i}.Vertices(objB_hVn).VertexType == gmtEnumE.gmt_VertexType.External;
+                    objB_tV_removeFlg = SecondaryObj{i}.Vertices(objB_tVn).VertexType == gmtEnumE.gmt_VertexType.External;
                     
                     % secondary logic flag determination 
                     objB_secLogic_flg = false;
@@ -2250,6 +2368,8 @@ classdef gmt_Graph
             ia = sort(ia);
             ParameterNew = ParamsTot(ia);
 
+            %% Update Exergy Equation Parameter Variables
+
             %% Update Dependent Vertex State Variables
             VertexStateVar_old = [VertexTot.ComponentStateVariable];
             VertexStateVar_idx = find(VertexStateVar_old ~= "");
@@ -2274,6 +2394,8 @@ classdef gmt_Graph
                     VertexTot(VertexIdx).CapacitanceEq = replace(VertexTot(VertexIdx).CapacitanceEq,OldStateVar,NewStateVar);
                 end
             end
+
+            %% Update Exergy Equation Dependent State Variables
 
             %% Update Port Array 
 
@@ -2382,6 +2504,8 @@ classdef gmt_Graph
 
             end
 
+            %% Update Exergy Equation Input Variables
+
             %% Create New Edge and Vertex Arrays 
             EdgeTot(objB_EdgeNumR) = [];
             VertexTot(objC_VertexNumR) = [];
@@ -2418,6 +2542,8 @@ classdef gmt_Graph
                     VertexNew(i) = gmt_Vertex(VertexName_tmp,CapEq_tmp);
                 end
             end
+
+            %% Concatenate Exergy Variable Input Argument
 
             %% Build Graph Model 
             sys = gmt_Graph(CombineName,EdgeMatrixNew,EdgeNew,VertexNew,ParameterNew,NewInput,PortsNew,varargin{:});

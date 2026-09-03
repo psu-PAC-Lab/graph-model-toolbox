@@ -12,6 +12,9 @@ classdef gmt_Tank < gmt_Graph
         %% Constructor Method
         function obj = gmt_Tank(ObjectName,varargin)
 
+            % class superclass parsing function 
+            params = gmt_Battery.gmt_parseClass(varargin{:});
+
             % Define Vertex Object Array
             Vertex(1) = gmt_Vertex("Temperature","cp_f*x2*x_dot","Units","K");
             Vertex(2) = gmt_Vertex("Mass","x_dot","Units","kg");
@@ -43,8 +46,34 @@ classdef gmt_Tank < gmt_Graph
             Port(1) = gmt_Port("EdgeConnection",1,"Thermal");
             Port(2) = gmt_Port("EdgeConnection",2,"Thermal");
 
+            % Define Exergy Class
+            % add variable input arguments 
+            % if output.ExergyFlg 
+            %     Exergy = gmt_Exergy("x1");
+            %     Parameter(2) = gmt_Parameter("Exergy Reference Temperature","T0",300,"Units","K","Common",true,"Optimization",true);
+            % else 
+            %     % Exergy = [];
+            % end
+
+            % concatcente varagin with exergy 
+
             % Creates Tank Object 
             obj@gmt_Graph(ObjectName,EdgeMatrix,Edge,Vertex,Parameter,Input,Port,varargin{:});
+
+        end
+    end
+
+    methods (Static)
+
+        %% Variable Input Argument Data Parsing 
+        function output = gmt_parseClass(varargin)
+
+            % Variable Input Parsing 
+            p = inputParser;
+            p.KeepUnmatched = true;
+            addParameter(p, 'ExergyFlg',false, @(x) islogical(x));
+            parse(p, varargin{:});
+            output = p.Results;
 
         end
     end
